@@ -2559,58 +2559,97 @@
     (function() {
         'use strict';
 
-        // Tunggu sampai main.js benar-benar dimuat dan semua fungsi pengganti Firebase siap
-        function waitForDependencies() {
-            // Cek apakah semua fungsi pengganti Firebase siap
-            if (typeof window.firebaseLoadHistory !== 'undefined' &&
+        // Override fungsi init dari main.js agar bisa dikontrol
+        var originalInit = window.init || function() {};
+        var originalCacheElements = window.cacheElements || function() {};
+
+        // Ganti fungsi cacheElements untuk memastikan elemen-elemen ditemukan
+        window.cacheElements = function() {
+            // Ini adalah versi yang lebih aman dari cacheElements
+            window.elements = {};
+
+            // Coba beberapa kali untuk mendapatkan elemen
+            var elementIds = [
+                'sidebar', 'sidebarBackdrop', 'menuToggle', 'newChatBtn', 'historyList',
+                'userCard', 'userAvatar', 'userName', 'userPlan', 'welcomeScreen',
+                'messagesContainer', 'typingIndicator', 'inputField', 'sendBtn',
+                'fileInput', 'uploadBtn', 'imagePreview', 'previewImg', 'removeImageBtn',
+                'chatArea', 'mainHeader', 'authModal', 'authModalClose', 'authModalTitle',
+                'authEmail', 'authPassword', 'authSubmitBtn', 'googleAuthBtn', 'authSwitchText',
+                'authSwitchLink', 'authContainer', 'loginBtn', 'settingsModal', 'settingsModalClose',
+                'settingsBtn', 'themeLightBtn', 'themeDarkBtn', 'colorOptions', 'fontSizeSlider',
+                'feedbackModal', 'feedbackModalClose', 'starRating', 'shareBtn', 'quickPrompts', 'toastContainer'
+            ];
+
+            var allFound = true;
+            elementIds.forEach(function(id) {
+                var element = document.getElementById(id);
+                if (element) {
+                    window.elements[id] = element;
+                    console.log("Santrilogy: Elemen ditemukan - " + id);
+                } else {
+                    console.warn("Santrilogy: Elemen TIDAK DITEMUKAN - " + id);
+                    allFound = false;
+                }
+            });
+
+            if (allFound) {
+                console.log("Santrilogy: Semua elemen DOM ditemukan");
+            } else {
+                console.warn("Santrilogy: Beberapa elemen DOM tidak ditemukan");
+            }
+        };
+
+        // Tunggu hingga DOM sepenuhnya siap dan semua elemen ditemukan
+        function waitForDOMAndFunctions() {
+            // Cek apakah semua fungsi pengganti Firebase siap dan elemen-elemen DOM ditemukan
+            var isReady = (
+                typeof window.firebaseLoadHistory !== 'undefined' &&
                 typeof window.firebaseSaveSession !== 'undefined' &&
                 typeof window.firebaseLoadSession !== 'undefined' &&
                 typeof window.firebaseDeleteSession !== 'undefined' &&
-                // Cek apakah SantrilogyApp juga sudah didefinisikan
                 typeof window.SantrilogyApp !== 'undefined' &&
-                // Cek apakah DOM siap
-                document.readyState !== 'loading') {
+                window.elements && Object.keys(window.elements).length > 10 // Perkiraan jumlah elemen yang harus ditemukan
+            );
 
-                console.log('Santrilogy: Semua dependensi siap, memulai inisialisasi ulang jika diperlukan...');
+            if (isReady && document.readyState !== 'loading') {
+                console.log('Santrilogy: Semua dependensi dan elemen siap, menjalankan inisialisasi...');
 
-                // Jika fungsi init belum berjalan atau perlu dijalankan ulang
-                if (typeof window.init === 'function' && (!window.SantrilogyApp.state || !window.SantrilogyApp.state.messages)) {
-                    console.log('Santrilogy: Menjalankan inisialisasi...');
-                    try {
-                        window.init();
-                    } catch (e) {
-                        console.error('Santrilogy: Error saat inisialisasi:', e);
+                // Jalankan inisialisasi
+                try {
+                    originalCacheElements(); // Gunakan yang asli jika ingin
+                    window.cacheElements(); // Jalankan yang diperbaiki
+                    window.initializeLibraries && window.initializeLibraries();
+                    window.loadPreferences && window.loadPreferences();
+                    window.setupEventListeners && window.setupEventListeners();
+                    window.setupFeedbackTimer && window.setupFeedbackTimer();
+                    window.setupSmartHeader && window.setupSmartHeader();
+
+                    // Update UI pengguna
+                    if (window.updateUserUI) {
+                        window.updateUserUI(null); // Mulai sebagai guest
                     }
+
+                    console.log('Santrilogy: Inisialisasi selesai');
+                } catch (e) {
+                    console.error('Santrilogy: Error dalam inisialisasi:', e);
                 }
             } else {
-                // Jika belum siap, tunggu 100ms lagi
-                setTimeout(waitForDependencies, 100);
+                // Coba lagi dalam 100ms
+                setTimeout(waitForDOMAndFunctions, 100);
             }
         }
 
-        // Mulai pengecekan
+        // Mulai proses inisialisasi ketika halaman sepenuhnya dimuat
         if (document.readyState === 'loading') {
-            // Jika DOM masih loading, tunggu dulu
-            document.addEventListener('DOMContentLoaded', waitForDependencies);
+            document.addEventListener('DOMContentLoaded', function() {
+                // Tambahkan delay kecil untuk memastikan semua skrip termasuk main.js selesai dimuat
+                setTimeout(waitForDOMAndFunctions, 500);
+            });
         } else {
-            // Jika sudah siap, cek sekarang
-            waitForDependencies();
+            // Jika sudah siap, coba segera
+            setTimeout(waitForDOMAndFunctions, 500);
         }
-
-        // Tambahkan juga pengecekan jika fungsi-fungsi tidak siap setelah delay
-        setTimeout(function() {
-            var missingFunctions = [];
-            if (typeof window.firebaseLoadHistory === 'undefined') missingFunctions.push('firebaseLoadHistory');
-            if (typeof window.firebaseSaveSession === 'undefined') missingFunctions.push('firebaseSaveSession');
-            if (typeof window.firebaseLoadSession === 'undefined') missingFunctions.push('firebaseLoadSession');
-            if (typeof window.firebaseDeleteSession === 'undefined') missingFunctions.push('firebaseDeleteSession');
-
-            if (missingFunctions.length > 0) {
-                console.warn('Santrilogy: Fungsi-fungsi berikut belum siap:', missingFunctions);
-            } else {
-                console.log('Santrilogy: Semua fungsi pengganti Firebase siap.');
-            }
-        }, 2000);
     })();
     //]]>
     </script>
