@@ -1,13 +1,14 @@
 // ========== FIREBASE GLOBAL NAMESPACE ==========
 
-// Firebase configuration - INI HARUS DIGANTI DENGAN KONFIGURASI AMAN ANDA
+// Firebase configuration - GANTI DENGAN KONFIGURASI FIREBASE ANDA SENDIRI
+// JANGAN COMMIT KONFIGURASI INI DENGAN API KEY SEBENARNYA
 const firebaseConfig = {
-    apiKey: "AIzaSyDkz6cMrzMpqaqHgXXUges15kO_TuqSTT8", // GANTI DENGAN API KEY YANG AMAN
-    authDomain: "santrilogy-ai.firebaseapp.com",
-    projectId: "santrilogy-ai",
-    storageBucket: "santrilogy-ai.firebasestorage.app",
-    messagingSenderId: "579627248718",
-    appId: "1:579627248718:web:0a7ae4d865b458abae271f"
+    apiKey: "YOUR_API_KEY_HERE", // GANTI DENGAN API KEY ANDA
+    authDomain: "your-project.firebaseapp.com", // GANTI DENGAN DOMAIN ANDA
+    projectId: "your-project-id", // GANTI DENGAN PROJECT ID ANDA
+    storageBucket: "your-project.appspot.com", // GANTI DENGAN STORAGE BUCKET ANDA
+    messagingSenderId: "your-sender-id", // GANTI DENGAN SENDER ID ANDA
+    appId: "your-app-id" // GANTI DENGAN APP ID ANDA
 };
 
 // Initialize Firebase using global namespace (no ES6 imports required)
