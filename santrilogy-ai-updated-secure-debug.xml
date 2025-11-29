@@ -2552,5 +2552,67 @@
         })();
         //]]>
     </script>
+
+    <!-- Santrilogy - Custom Initialization Fix -->
+    <script type='text/javascript'>
+    //<![CDATA[
+    (function() {
+        'use strict';
+
+        // Tunggu sampai main.js benar-benar dimuat dan semua fungsi pengganti Firebase siap
+        function waitForDependencies() {
+            // Cek apakah semua fungsi pengganti Firebase siap
+            if (typeof window.firebaseLoadHistory !== 'undefined' &&
+                typeof window.firebaseSaveSession !== 'undefined' &&
+                typeof window.firebaseLoadSession !== 'undefined' &&
+                typeof window.firebaseDeleteSession !== 'undefined' &&
+                // Cek apakah SantrilogyApp juga sudah didefinisikan
+                typeof window.SantrilogyApp !== 'undefined' &&
+                // Cek apakah DOM siap
+                document.readyState !== 'loading') {
+
+                console.log('Santrilogy: Semua dependensi siap, memulai inisialisasi ulang jika diperlukan...');
+
+                // Jika fungsi init belum berjalan atau perlu dijalankan ulang
+                if (typeof window.init === 'function' && (!window.SantrilogyApp.state || !window.SantrilogyApp.state.messages)) {
+                    console.log('Santrilogy: Menjalankan inisialisasi...');
+                    try {
+                        window.init();
+                    } catch (e) {
+                        console.error('Santrilogy: Error saat inisialisasi:', e);
+                    }
+                }
+            } else {
+                // Jika belum siap, tunggu 100ms lagi
+                setTimeout(waitForDependencies, 100);
+            }
+        }
+
+        // Mulai pengecekan
+        if (document.readyState === 'loading') {
+            // Jika DOM masih loading, tunggu dulu
+            document.addEventListener('DOMContentLoaded', waitForDependencies);
+        } else {
+            // Jika sudah siap, cek sekarang
+            waitForDependencies();
+        }
+
+        // Tambahkan juga pengecekan jika fungsi-fungsi tidak siap setelah delay
+        setTimeout(function() {
+            var missingFunctions = [];
+            if (typeof window.firebaseLoadHistory === 'undefined') missingFunctions.push('firebaseLoadHistory');
+            if (typeof window.firebaseSaveSession === 'undefined') missingFunctions.push('firebaseSaveSession');
+            if (typeof window.firebaseLoadSession === 'undefined') missingFunctions.push('firebaseLoadSession');
+            if (typeof window.firebaseDeleteSession === 'undefined') missingFunctions.push('firebaseDeleteSession');
+
+            if (missingFunctions.length > 0) {
+                console.warn('Santrilogy: Fungsi-fungsi berikut belum siap:', missingFunctions);
+            } else {
+                console.log('Santrilogy: Semua fungsi pengganti Firebase siap.');
+            }
+        }, 2000);
+    })();
+    //]]>
+    </script>
 </body>
 </html>
