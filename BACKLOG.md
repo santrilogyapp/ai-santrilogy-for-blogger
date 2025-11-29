@@ -69,7 +69,19 @@
   - Fix the broken Midtrans payment link.
   - Trigger Logic: Display the donation card automatically after the 7th, 20th, 50th message, and every subsequent multiple of 50.
 
-## 8. Settings
+## 8. Visual Content & Diagrams
+
+### Replace Mermaid with Enhanced Diagram System
+- **Context:** Current Mermaid.js implementation may have responsiveness, aesthetic, and error handling issues.
+- **Task:** Replace Mermaid.js with a more aesthetic, responsive, and error-resistant diagram system that includes:
+  - Better mobile responsiveness for diagrams
+  - More visually appealing styling that matches the template's design system
+  - Improved error handling when diagram rendering fails
+  - Better fallback mechanisms for unsupported diagram types
+  - Optimized rendering performance
+  - Support for additional diagram types beyond flowcharts (sequence, gantt, pie charts, etc.)
+
+## 9. Settings
 
 ### Functional Settings Menu
 - **Task:** Ensure the "Settings" modal is fully functional (e.g., connecting the Theme Toggle, Font Size slider to the actual CSS variables).

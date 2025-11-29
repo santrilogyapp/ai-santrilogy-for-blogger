@@ -6,18 +6,21 @@ Setelah file JavaScript dipindahkan ke GitHub, Anda bisa menggunakan CDN untuk m
 
 ### 1. Gunakan jsDelivr CDN
 
-Ganti blok JavaScript di template Blogger Anda dengan skrip berikut:
+Ganti blok JavaScript di template Blogger Anda dengan skrip berikut (urutan penting!):
 
 ```html
-<!-- External Scripts -->
-<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/main.js'/>
-<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/firebase.js'/>
-<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/utils.js'/>
-
-<!-- Libraries -->
+<!-- External Libraries - Load Firebase SDK first -->
+<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'/>
+<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js'/>
+<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js'/>
 <script src='https://cdn.jsdelivr.net/npm/marked/marked.min.js'/>
 <script src='https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js'/>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js'/>
+
+<!-- Main Application Scripts -->
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/main.js'/>
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/firebase.js'/>
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/utils.js'/>
 ```
 
 ### 2. Versi Spesifik

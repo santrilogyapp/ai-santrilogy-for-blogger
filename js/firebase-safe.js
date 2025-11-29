@@ -1,9 +1,4 @@
-// ========== FIREBASE MODULE ==========
-
-// Import Firebase modules
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// ========== FIREBASE GLOBAL NAMESPACE ==========
 
 // Firebase configuration - GANTI DENGAN KONFIGURASI ANDA SENDIRI
 // JANGAN COMMIT KONFIGURASI INI DENGAN API KEY SEBENARNYA
@@ -16,15 +11,16 @@ const firebaseConfig = {
     appId: "your-app-id" // GANTI DENGAN APP ID ANDA
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
+// Initialize Firebase using global namespace (no ES6 imports required)
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth(app);
+const db = firebase.firestore(app);
+const provider = new firebase.auth.GoogleAuthProvider();
 
 // ========== AUTH FUNCTIONS ==========
 window.firebaseGoogleAuth = async function() {
     try {
-        await signInWithPopup(auth, provider);
+        await firebase.auth().signInWithPopup(provider);
         window.SantrilogyApp.closeModal('authModal');
         window.SantrilogyApp.showToast("Login berhasil! 🎉", "success");
     } catch (e) {
@@ -35,10 +31,10 @@ window.firebaseGoogleAuth = async function() {
 window.firebaseEmailAuth = async function(email, password, mode) {
     try {
         if (mode === 'register') {
-            await createUserWithEmailAndPassword(auth, email, password);
+            await firebase.auth().createUserWithEmailAndPassword(email, password);
             window.SantrilogyApp.showToast("Akun berhasil dibuat! 🎉", "success");
         } else {
-            await signInWithEmailAndPassword(auth, email, password);
+            await firebase.auth().signInWithEmailAndPassword(email, password);
             window.SantrilogyApp.showToast("Selamat datang kembali! 👋", "success");
         }
         window.SantrilogyApp.closeModal('authModal');
@@ -49,7 +45,7 @@ window.firebaseEmailAuth = async function(email, password, mode) {
 
 window.firebaseLogout = async function() {
     try {
-        await signOut(auth);
+        await firebase.auth().signOut();
         window.SantrilogyApp.showToast("Sampai jumpa! 👋", "success");
     } catch (e) {
         window.SantrilogyApp.showToast(e.message, "error");
@@ -60,17 +56,17 @@ window.firebaseLogout = async function() {
 
 // Simpan session ke Firestore
 window.firebaseSaveSession = async function(sessionId, title, messages) {
-    const user = auth.currentUser;
+    const user = firebase.auth().currentUser;
     if (!user) return false;
 
     try {
-        const sessionRef = doc(db, 'users', user.uid, 'sessions', sessionId);
-        await setDoc(sessionRef, {
+        const sessionRef = db.collection('users').doc(user.uid).collection('sessions').doc(sessionId);
+        await sessionRef.set({
             title: title,
             messages: messages,
             messageCount: messages.length,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
         return true;
     } catch (e) {
@@ -81,19 +77,19 @@ window.firebaseSaveSession = async function(sessionId, title, messages) {
 
 // Load semua sessions (history list)
 window.firebaseLoadHistory = async function() {
-    const user = auth.currentUser;
+    const user = firebase.auth().currentUser;
     if (!user) return [];
 
     try {
-        const sessionsRef = collection(db, 'users', user.uid, 'sessions');
-        const q = query(sessionsRef, orderBy('updatedAt', 'desc'), limit(50));
-        const snapshot = await getDocs(q);
+        const sessionsCollection = db.collection('users').doc(user.uid).collection('sessions');
+        const q = sessionsCollection.orderBy('updatedAt', 'desc').limit(50);
+        const snapshot = await q.get();
 
         var history = [];
-        snapshot.forEach(function(doc) {
-            var data = doc.data();
+        snapshot.forEach(function(docSnap) {
+            var data = docSnap.data();
             history.push({
-                id: doc.id,
+                id: docSnap.id,
                 title: data.title,
                 messageCount: data.messageCount || 0,
                 timestamp: data.updatedAt ? data.updatedAt.toMillis() : Date.now()
@@ -109,14 +105,14 @@ window.firebaseLoadHistory = async function() {
 
 // Load satu session (messages)
 window.firebaseLoadSession = async function(sessionId) {
-    const user = auth.currentUser;
+    const user = firebase.auth().currentUser;
     if (!user) return null;
 
     try {
-        const sessionRef = doc(db, 'users', user.uid, 'sessions', sessionId);
-        const snapshot = await getDoc(sessionRef);
+        const sessionRef = db.collection('users').doc(user.uid).collection('sessions').doc(sessionId);
+        const snapshot = await sessionRef.get();
 
-        if (snapshot.exists()) {
+        if (snapshot.exists) {
             return snapshot.data();
         }
         return null;
@@ -128,12 +124,12 @@ window.firebaseLoadSession = async function(sessionId) {
 
 // Hapus session
 window.firebaseDeleteSession = async function(sessionId) {
-    const user = auth.currentUser;
+    const user = firebase.auth().currentUser;
     if (!user) return false;
 
     try {
-        const sessionRef = doc(db, 'users', user.uid, 'sessions', sessionId);
-        await deleteDoc(sessionRef);
+        const sessionRef = db.collection('users').doc(user.uid).collection('sessions').doc(sessionId);
+        await sessionRef.delete();
         return true;
     } catch (e) {
         console.error('Delete session error:', e);
@@ -142,7 +138,7 @@ window.firebaseDeleteSession = async function(sessionId) {
 };
 
 // ========== AUTH STATE ==========
-onAuthStateChanged(auth, (user) => {
+firebase.auth().onAuthStateChanged((user) => {
     // Fungsi Safety Check: Cek apakah SantrilogyApp sudah siap?
     function safeUpdate() {
         if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
