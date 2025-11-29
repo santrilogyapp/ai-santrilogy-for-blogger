@@ -47,6 +47,37 @@ export default {
         return await handleGoogleAuthRedirect(request, env, headers);
       } else if (path === '/api/auth/callback' && request.method === 'GET') {
         return await handleGoogleAuthCallback(request, env, headers);
+      } else if (path === '/health' && request.method === 'GET') {
+        return new Response(JSON.stringify({
+          status: 'healthy',
+          timestamp: Date.now(),
+          service: 'Santrilogy AI Worker'
+        }), {
+          status: 200,
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          }
+        });
+      } else if (path === '/' && request.method === 'GET') {
+        return new Response(JSON.stringify({
+          message: 'Santrilogy AI Worker - Backend Authentication Service',
+          endpoints: [
+            '/api/chat',
+            '/api/history',
+            '/api/session',
+            '/api/auth',
+            '/api/auth/google',
+            '/api/auth/callback',
+            '/health'
+          ]
+        }), {
+          status: 200,
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          }
+        });
       } else {
         return new Response(JSON.stringify({ error: 'Endpoint tidak ditemukan' }), {
           status: 404,

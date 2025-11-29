@@ -664,9 +664,43 @@ if (typeof window.firebaseLogout !== 'function') {
     };
 }
 
-// Tandai bahwa auth system sedang dimuat
+// Fungsi untuk mengecek koneksi dengan Worker
+async function checkWorkerConnection() {
+    try {
+        const response = await fetch(CLOUDFLARE_WORKER_CONFIG.BASE_URL + '/health', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        return response.ok;
+    } catch (error) {
+        console.warn('Worker connection failed:', error);
+        return false;
+    }
+}
+
+// Tandai bahwa auth system sedang dimuat dan cek koneksi
 window.authSystemStatus = {
     ready: false,
     loading: true,
-    timestamp: Date.now()
+    connected: false,
+    timestamp: Date.now(),
+    async initialize() {
+        // Cek koneksi ke Worker
+        this.connected = await checkWorkerConnection();
+        this.loading = false;
+
+        if (this.connected) {
+            console.log('Santrilogy AI: Backend Worker terhubung');
+        } else {
+            console.warn('Santrilogy AI: Backend Worker tidak terhubung');
+        }
+
+        return this.connected;
+    }
 };
+
+// Jalankan inisialisasi status koneksi
+window.authSystemStatus.initialize();
