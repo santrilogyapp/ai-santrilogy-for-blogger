@@ -4,7 +4,7 @@
 <head>
     <meta content='width=device-width, initial-scale=1' name='viewport'/>
     <title><data:blog.pageTitle/> - Teman Diskusi Santrilogy</title>
-    <meta content='Santrilogy AI adalah teman diskusi cerdas untuk membahas Kitab Kuning, pendidikan Islam, teknologi, dan cerita inspiratif.' name='description'/>
+    <meta content='Santrilogy AI adalah teman diskusi cerdas yang sangat cakap, cerdas, dan menyenangkan. Berbasis Ahlussunnah wal Jamaah, Fiqih Mazhab Syafii, Akidah Asyari-Maturidi, dan Akhlak-Tasawuf Al-Ghazali. Mampu membantu dalam pendidikan, manajemen pendidikan, analisis data, teori konspirasi, hiburan, dan cerita puitis serta humoris.' name='description'/>
 
     <!-- Fonts: Premium Arabic + Latin -->
     <link href='https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&amp;family=Scheherazade+New:wght@400;500;600;700&amp;family=Amiri:wght@400;700&amp;family=Amiri+Quran&amp;family=Noto+Naskh+Arabic:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Lora:wght@400;500;600;700&amp;display=swap' rel='stylesheet'/>
@@ -2082,17 +2082,33 @@
                                 <div class='quick-prompt-icon'>📖</div>
                                 <div class='quick-prompt-text'>Bikin RPP (Rencana Pelaksanaan Pembelajaran)</div>
                             </div>
-                            <div class='quick-prompt' data-prompt='Saya ingin menganalisis sesuatu, bisakah kamu bantu? apa saja yang kamu butuhkan?'>
+                            <div class='quick-prompt' data-prompt='Saya ingin menganalisis data pendidikan, bisakah kamu bantu?'>
                                 <div class='quick-prompt-icon'>📊</div>
-                                <div class='quick-prompt-text'>Analisis data atau nilai</div>
+                                <div class='quick-prompt-text'>Analisis data pendidikan</div>
                             </div>
-                            <div class='quick-prompt' data-prompt='Saya ingin berdiskusi denganmu'>
+                            <div class='quick-prompt' data-prompt='Saya ingin membuat manajemen pendidikan, bisakah kamu bantu?'>
+                                <div class='quick-prompt-icon'>🎓</div>
+                                <div class='quick-prompt-text'>Manajemen pendidikan</div>
+                            </div>
+                            <div class='quick-prompt' data-prompt='Saya ingin berdiskusi tentang hukum islam'>
                                 <div class='quick-prompt-icon'>&#9878;&#65039;</div>
                                 <div class='quick-prompt-text'>Diskusi hukum islam</div>
                             </div>
-                            <div class='quick-prompt' data-prompt='Buatkan jadwal harian santri yang efektif dalam bentuk tabel'>
-                                <div class='quick-prompt-icon'>📅</div>
-                                <div class='quick-prompt-text'>Jadwal harian santri</div>
+                            <div class='quick-prompt' data-prompt='Saya ingin kamu bantu analisis data numerik'>
+                                <div class='quick-prompt-icon'>🔢</div>
+                                <div class='quick-prompt-text'>Analisis data numerik</div>
+                            </div>
+                            <div class='quick-prompt' data-prompt='Ceritakan dongeng yang puitis dan menginspirasi'>
+                                <div class='quick-prompt-icon'>🌙</div>
+                                <div class='quick-prompt-text'>Cerita puitis</div>
+                            </div>
+                            <div class='quick-prompt' data-prompt='Aku pengen cerita lucu atau humoris'>
+                                <div class='quick-prompt-icon'>😄</div>
+                                <div class='quick-prompt-text'>Cerita humoris</div>
+                            </div>
+                            <div class='quick-prompt' data-prompt='Bicara tentang teori konspirasi dengan logis'>
+                                <div class='quick-prompt-icon'>🔍</div>
+                                <div class='quick-prompt-text'>Teori konspirasi</div>
                             </div>
                         </div>
                     </div>
