@@ -1,0 +1,68 @@
+{
+  "projectName": "Santrilogy AI for Blogger",
+  "version": "1.0.0",
+  "description": "Template Blogger canggih dengan fitur chat AI untuk diskusi Kitab Kuning, pendidikan Islam, teknologi, dan cerita inspiratif",
+  "files": [
+    {
+      "name": "js/main.js",
+      "description": "Fungsi utama aplikasi, termasuk logika chat, rendering, dan UI",
+      "dependencies": [
+        "marked",
+        "mermaid",
+        "highlight.js"
+      ]
+    },
+    {
+      "name": "js/firebase.js", 
+      "description": "Konfigurasi dan fungsi Firebase untuk otentikasi dan penyimpanan riwayat chat",
+      "dependencies": [
+        "firebase-app",
+        "firebase-auth", 
+        "firebase-firestore"
+      ]
+    },
+    {
+      "name": "js/utils.js",
+      "description": "Fungsi utilitas umum untuk formatting, validasi, dan operasi bantuan",
+      "dependencies": []
+    }
+  ],
+  "externalLibraries": [
+    {
+      "name": "marked",
+      "description": "Markdown parser untuk rendering pesan AI",
+      "cdn": "https://cdn.jsdelivr.net/npm/marked/marked.min.js"
+    },
+    {
+      "name": "mermaid",
+      "description": "Library untuk membuat diagram dan flowchart",
+      "cdn": "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"
+    },
+    {
+      "name": "highlight.js",
+      "description": "Syntax highlighting untuk code blocks",
+      "cdn": "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"
+    }
+  ],
+  "bloggerIntegration": {
+    "cdnLinks": [
+      "https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/main.js",
+      "https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/firebase.js", 
+      "https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/utils.js"
+    ],
+    "requiredElements": [
+      "sidebar",
+      "messagesContainer", 
+      "inputField",
+      "typingIndicator",
+      "authModal",
+      "settingsModal",
+      "feedbackModal"
+    ]
+  },
+  "securityNotes": [
+    "Ganti API keys Firebase dengan yang aman saat deployment",
+    "Gunakan Firebase Security Rules yang ketat",
+    "Jangan simpan konfigurasi sensitif di client-side"
+  ]
+}

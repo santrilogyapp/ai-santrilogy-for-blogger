@@ -1,0 +1,30 @@
+{
+  "name": "santrilogy-ai-for-blogger",
+  "version": "1.0.0",
+  "description": "Santrilogy AI adalah template Blogger canggih yang menyediakan antarmuka chat AI untuk diskusi tentang Kitab Kuning, pendidikan Islam, teknologi, dan cerita inspiratif.",
+  "main": "js/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo \"Build script coming soon\"",
+    "dev": "echo \"Development server coming soon\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/santrilogyapp/ai-santrilogy-for-blogger.git"
+  },
+  "keywords": [
+    "blogger",
+    "template",
+    "ai",
+    "islamic",
+    "education",
+    "chat",
+    "arabic"
+  ],
+  "author": "Santrilogy",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/santrilogyapp/ai-santrilogy-for-blogger/issues"
+  },
+  "homepage": "https://github.com/santrilogyapp/ai-santrilogy-for-blogger#readme"
+}
