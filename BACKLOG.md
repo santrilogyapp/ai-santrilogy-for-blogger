@@ -10,6 +10,15 @@
 - **Context:** Potential Uncaught SyntaxError: Cannot use import statement on older browsers or specific environments.
 - **Task:** Refactor main.js and firebase.js to use global namespaces (e.g., firebase.auth()) instead of ES6 imports, OR strictly enforce `<script type="module">` in the Blogger template.
 
+### Secure Production Architecture with Backend API
+- **Context:** Current implementation exposes Firebase configuration in client-side code, creating security vulnerabilities in production.
+- **Task:**
+  - Implement Cloudflare Workers as secure API layer
+  - Move all Firebase operations to backend
+  - Update template to communicate through secure endpoints
+  - Add authentication and rate limiting
+  - Implement proper error handling and validation
+
 ## 2. UI/UX & Responsive Design
 
 ### Global Responsive Overhaul

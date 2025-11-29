@@ -1,0 +1,32 @@
+name = "santrilogy-ai-worker"
+main = "index.js"
+compatibility_date = "2023-12-01"
+
+# Environment variables untuk produksi
+[vars]
+# Ganti dengan nilai Anda
+FIREBASE_API_KEY = "YOUR_FIREBASE_API_KEY"
+FIREBASE_AUTH_DOMAIN = "your-project.firebaseapp.com"
+FIREBASE_PROJECT_ID = "your-project-id"
+FIREBASE_STORAGE_BUCKET = "your-project.appspot.com"
+FIREBASE_MESSAGING_SENDER_ID = "your-sender-id"
+FIREBASE_APP_ID = "your-app-id"
+AI_WORKER_URL = "https://your-ai-worker.your-namespace.workers.dev"
+GOOGLE_ACCESS_TOKEN = "YOUR_GOOGLE_ACCESS_TOKEN" # Ini adalah service account token
+
+# Konfigurasi rute (sesuaikan dengan domain Anda)
+routes = [
+  "https://*.yourdomain.com/*",  # Ganti dengan domain Anda
+  "https://yourdomain.com/*"     # Ganti dengan domain Anda
+]
+
+# Jika Anda ingin menggunakan KV namespace untuk cache
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "your-kv-namespace-id"
+
+# Jika Anda ingin menggunakan D1 database
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "your-database-name"
+# database_id = "your-database-id"

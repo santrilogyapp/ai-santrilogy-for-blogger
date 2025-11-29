@@ -66,6 +66,56 @@ Untuk stabilitas, gunakan versi tertentu:
 <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/main.js'/>
 ```
 
+## 5. Arsitektur Aman dengan Cloudflare Workers (Direkomendasikan untuk Produksi)
+
+Untuk keamanan maksimal di lingkungan produksi, disarankan menggunakan Cloudflare Workers sebagai lapisan API yang aman. Ini memindahkan semua kredensial sensitif dari sisi klien ke backend yang dilindungi.
+
+### Ikhtisar Arsitektur
+```
+Browser (Template Blogger) → Cloudflare Workers → Firebase/Backend Services
+```
+
+### Keunggulan:
+- Tidak ada kunci API yang terpapar di sisi klien
+- Perlindungan dari penyalahgunaan API
+- Validasi input dan otentikasi di server
+- Pembatasan akses origin
+- Kemampuan untuk menambahkan rate limiting
+
+### Setup Dasar:
+
+1. **Buat Worker Baru:**
+   ```bash
+   npm install -g wrangler
+   wrangler init santrilogy-ai-worker
+   ```
+
+2. **Konfigurasi Environment Variables di `wrangler.toml`:**
+   ```toml
+   [vars]
+   FIREBASE_API_KEY = "kunci_api_firebase_anda"
+   FIREBASE_PROJECT_ID = "id_proyek_firebase_anda"
+   AI_WORKER_URL = "https://worker-ai-anda.namespace.workers.dev"
+   ```
+
+3. **Update Template Blogger:**
+   - Hapus skrip Firebase dari template
+   - Gunakan endpoint worker untuk semua operasi data
+   - Lihat `worker/safe-template.js` untuk contoh implementasi
+
+4. **Deploy Worker:**
+   ```bash
+   wrangler deploy
+   ```
+
+### Endpoint API yang Tersedia:
+- `POST /api/chat` - Kirim pesan ke AI
+- `GET /api/history` - Ambil histori percakapan
+- `POST /api/session` - Operasi sesi (simpan, muat, hapus)
+- `POST /api/auth` - Operasi otentikasi
+
+Untuk detail lengkap implementasi, lihat folder `worker/` dalam repositori ini.
+
 ## Konfigurasi Tambahan
 
 ### Worker Endpoint

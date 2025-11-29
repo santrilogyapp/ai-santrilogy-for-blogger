@@ -30,6 +30,7 @@ js/
 5. **History** - Menyimpan riwayat percakapan
 6. **Otentikasi** - Login dengan email atau Google
 7. **Open Graph** - Dukungan untuk sharing media sosial dengan gambar og:image yang telah ditentukan
+8. **Arsitektur Aman** - Mendukung integrasi dengan Cloudflare Workers untuk keamanan produksi
 
 ## Format Teks Arab
 
