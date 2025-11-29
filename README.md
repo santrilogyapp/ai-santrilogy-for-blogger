@@ -32,6 +32,7 @@ js/
 7. **Open Graph** - Dukungan untuk sharing media sosial dengan gambar og:image yang telah ditentukan
 8. **Arsitektur Aman** - Mendukung integrasi dengan Cloudflare Workers untuk keamanan produksi
 9. **Production Ready** - Telah di-deploy di `https://worker-santrilogy-ai.santrilogyapp.workers.dev`
+10. **Template Aman** - Tersedia versi template tanpa kredensial Firebase (`santrilogy-ai-updated-secure.xml`)
 
 ## Format Teks Arab
 

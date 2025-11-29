@@ -15,6 +15,8 @@ All notable changes to the Santrilogy AI for Blogger project will be documented 
 - API examples for various deployment platforms
 - Production deployment at https://worker-santrilogy-ai.santrilogyapp.workers.dev
 - Complete integration guide for production Cloudflare Workers
+- Secure Blogger template version (santrilogy-ai-updated-secure.xml) without Firebase exposure
+- Cloudflare Worker API integration code embedded directly in template
 
 ### Fixed
 - XML parsing error by properly encoding angle brackets in attribute values (&lt; and &gt;)

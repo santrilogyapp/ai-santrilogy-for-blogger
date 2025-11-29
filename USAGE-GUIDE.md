@@ -116,6 +116,7 @@ Lihat `api-examples/deployment-options.md` untuk panduan lengkap deployment ke b
 - Ganti konfigurasi URL API di template
 - Hapus semua referensi Firebase langsung
 - Gunakan `api-examples/vercel-api.js` sebagai contoh backend
+- **Atau gunakan template siap pakai**: `santrilogy-ai-updated-secure.xml` (versi telah diupdate tanpa Firebase langsung)
 
 ## Konfigurasi Tambahan
 
