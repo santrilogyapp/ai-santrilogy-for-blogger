@@ -13,9 +13,9 @@ File `firebase.js` saat ini berisi konfigurasi default yang harus diganti:
 ```javascript
 // SEGERA GANTI KONFIGURASI INI DENGAN KONFIGURASI ANDA SENDIRI
 const firebaseConfig = {
-    apiKey: "AIzaSyDkz6cMrzMpqaqHgXXUges15kO_TuqSTT8", // GANTI INI
-    authDomain: "santrilogy-ai.firebaseapp.com",        // GANTI INI
-    projectId: "santrilogy-ai",                         // GANTI INI
+    apiKey: "YOUR_API_KEY_HERE",                        // GANTI DENGAN API KEY ANDA
+    authDomain: "your-project.firebaseapp.com",         // GANTI DENGAN DOMAIN ANDA
+    projectId: "your-project-id",                       // GANTI DENGAN PROJECT ID ANDA
     // ... dll
 };
 ```
