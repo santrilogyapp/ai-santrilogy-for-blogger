@@ -2530,96 +2530,112 @@
     (function() {
         'use strict';
 
-        // Override fungsi init dari main.js agar bisa dikontrol
-        var originalInit = window.init || function() {};
-        var originalCacheElements = window.cacheElements || function() {};
+        // Tunggu main.js dimuat, lalu pastikan elemen-elemen ditemukan sebelum inisialisasi
+        function safeInitialize() {
+            // Langsung coba cari elemen-elemen penting
+            var elementsToFind = {
+                'sidebar': document.getElementById('sidebar'),
+                'messagesContainer': document.getElementById('messagesContainer'),
+                'inputField': document.getElementById('inputField'),
+                'sendBtn': document.getElementById('sendBtn'),
+                'chatArea': document.getElementById('chatArea'),
+                'mainHeader': document.getElementById('mainHeader'),
+                'authModal': document.getElementById('authModal'),
+                'settingsModal': document.getElementById('settingsModal'),
+                'feedbackModal': document.getElementById('feedbackModal'),
+                'quickPrompts': document.getElementById('quickPrompts'),
+                'welcomeScreen': document.getElementById('welcomeScreen'),
+                'historyList': document.getElementById('historyList'),
+                'typingIndicator': document.getElementById('typingIndicator'),
+                'userCard': document.getElementById('userCard'),
+                'loginBtn': document.getElementById('loginBtn'),
+                'settingsBtn': document.getElementById('settingsBtn'),
+                'menuToggle': document.getElementById('menuToggle'),
+                'newChatBtn': document.getElementById('newChatBtn')
+            };
 
-        // Ganti fungsi cacheElements untuk memastikan elemen-elemen ditemukan
-        window.cacheElements = function() {
-            // Ini adalah versi yang lebih aman dari cacheElements
-            window.elements = {};
-
-            // Coba beberapa kali untuk mendapatkan elemen
-            var elementIds = [
-                'sidebar', 'sidebarBackdrop', 'menuToggle', 'newChatBtn', 'historyList',
-                'userCard', 'userAvatar', 'userName', 'userPlan', 'welcomeScreen',
-                'messagesContainer', 'typingIndicator', 'inputField', 'sendBtn',
-                'fileInput', 'uploadBtn', 'imagePreview', 'previewImg', 'removeImageBtn',
-                'chatArea', 'mainHeader', 'authModal', 'authModalClose', 'authModalTitle',
-                'authEmail', 'authPassword', 'authSubmitBtn', 'googleAuthBtn', 'authSwitchText',
-                'authSwitchLink', 'authContainer', 'loginBtn', 'settingsModal', 'settingsModalClose',
-                'settingsBtn', 'themeLightBtn', 'themeDarkBtn', 'colorOptions', 'fontSizeSlider',
-                'feedbackModal', 'feedbackModalClose', 'starRating', 'shareBtn', 'quickPrompts', 'toastContainer'
-            ];
-
-            var allFound = true;
-            elementIds.forEach(function(id) {
-                var element = document.getElementById(id);
-                if (element) {
-                    window.elements[id] = element;
-                    console.log("Santrilogy: Elemen ditemukan - " + id);
-                } else {
-                    console.warn("Santrilogy: Elemen TIDAK DITEMUKAN - " + id);
-                    allFound = false;
+            // Update objek elements global agar main.js bisa menggunakannya
+            if (typeof window !== 'undefined') {
+                if (typeof window.elements === 'undefined') {
+                    window.elements = {};
                 }
-            });
 
-            if (allFound) {
-                console.log("Santrilogy: Semua elemen DOM ditemukan");
-            } else {
-                console.warn("Santrilogy: Beberapa elemen DOM tidak ditemukan");
+                for (var key in elementsToFind) {
+                    if (elementsToFind[key]) {
+                        window.elements[key] = elementsToFind[key];
+                    }
+                }
             }
-        };
 
-        // Tunggu hingga DOM sepenuhnya siap dan semua elemen ditemukan
-        function waitForDOMAndFunctions() {
-            // Cek apakah semua fungsi pengganti Firebase siap dan elemen-elemen DOM ditemukan
-            var isReady = (
+            // Cek apakah semua fungsi pengganti Firebase siap
+            var firebaseFunctionsReady = (
                 typeof window.firebaseLoadHistory !== 'undefined' &&
                 typeof window.firebaseSaveSession !== 'undefined' &&
                 typeof window.firebaseLoadSession !== 'undefined' &&
-                typeof window.firebaseDeleteSession !== 'undefined' &&
-                typeof window.SantrilogyApp !== 'undefined' &&
-                window.elements && Object.keys(window.elements).length > 10 // Perkiraan jumlah elemen yang harus ditemukan
+                typeof window.firebaseDeleteSession !== 'undefined'
             );
 
-            if (isReady && document.readyState !== 'loading') {
-                console.log('Santrilogy: Semua dependensi dan elemen siap, menjalankan inisialisasi...');
+            // Cek apakah SantrilogyApp sudah siap
+            var appReady = typeof window.SantrilogyApp !== 'undefined';
 
-                // Jalankan inisialisasi
-                try {
-                    originalCacheElements(); // Gunakan yang asli jika ingin
-                    window.cacheElements(); // Jalankan yang diperbaiki
-                    window.initializeLibraries && window.initializeLibraries();
-                    window.loadPreferences && window.loadPreferences();
-                    window.setupEventListeners && window.setupEventListeners();
-                    window.setupFeedbackTimer && window.setupFeedbackTimer();
-                    window.setupSmartHeader && window.setupSmartHeader();
+            // Cek apakah elemen-elemen penting sudah siap
+            var criticalElementsReady = !!(elementsToFind.sidebar &&
+                                          elementsToFind.inputField &&
+                                          elementsToFind.sendBtn &&
+                                          elementsToFind.messagesContainer);
 
-                    // Update UI pengguna
-                    if (window.updateUserUI) {
-                        window.updateUserUI(null); // Mulai sebagai guest
+            if (firebaseFunctionsReady && criticalElementsReady) {
+                console.log('Santrilogy: Semua dependensi siap, inisialisasi...');
+
+                // Jalankan fungsi inisialisasi utama jika tersedia
+                if (typeof window.init === 'function') {
+                    try {
+                        window.init();
+                        console.log('Santrilogy: Inisialisasi utama selesai');
+                    } catch (e) {
+                        console.error('Santrilogy: Error saat inisialisasi:', e);
                     }
+                } else {
+                    // Jika fungsi init tidak ditemukan, panggil komponen utama satu per satu
+                    try {
+                        if (typeof window.cacheElements === 'function') window.cacheElements();
+                        if (typeof window.initializeLibraries === 'function') window.initializeLibraries();
+                        if (typeof window.loadPreferences === 'function') window.loadPreferences();
+                        if (typeof window.setupEventListeners === 'function') window.setupEventListeners();
+                        if (typeof window.setupFeedbackTimer === 'function') window.setupFeedbackTimer();
+                        if (typeof window.setupSmartHeader === 'function') window.setupSmartHeader();
 
-                    console.log('Santrilogy: Inisialisasi selesai');
-                } catch (e) {
-                    console.error('Santrilogy: Error dalam inisialisasi:', e);
+                        // Pastikan UI user diupdate
+                        if (typeof window.updateUserUI === 'function') {
+                            window.updateUserUI(null); // Tampilkan sebagai guest
+                        }
+
+                        console.log('Santrilogy: Inisialisasi komponen selesai');
+                    } catch (e) {
+                        console.error('Santrilogy: Error saat inisialisasi komponen:', e);
+                    }
                 }
             } else {
-                // Coba lagi dalam 100ms
-                setTimeout(waitForDOMAndFunctions, 100);
+                console.log('Santrilogy: Menunggu dependensi...', {
+                    firebaseReady: firebaseFunctionsReady,
+                    elementsReady: criticalElementsReady,
+                    appReady: appReady
+                });
+
+                // Coba lagi setelah delay
+                setTimeout(safeInitialize, 200);
             }
         }
 
-        // Mulai proses inisialisasi ketika halaman sepenuhnya dimuat
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                // Tambahkan delay kecil untuk memastikan semua skrip termasuk main.js selesai dimuat
-                setTimeout(waitForDOMAndFunctions, 500);
-            });
+        // Mulai proses inisialisasi
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            // Jika DOM sudah siap, mulai sekarang
+            setTimeout(safeInitialize, 100);
         } else {
-            // Jika sudah siap, coba segera
-            setTimeout(waitForDOMAndFunctions, 500);
+            // Tunggu DOM siap
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(safeInitialize, 100);
+            });
         }
     })();
     //]]>
