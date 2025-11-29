@@ -198,3 +198,77 @@ window.firebaseLoadHistory = FirebaseReplacement.loadHistory;
 window.firebaseSaveSession = FirebaseReplacement.saveSession;
 window.firebaseLoadSession = FirebaseReplacement.loadSession;
 window.firebaseDeleteSession = FirebaseReplacement.deleteSession;
+
+// Fungsi autentikasi tambahan
+window.firebaseGoogleAuth = async function() {
+    try {
+        // For now, we'll simulate a successful auth with a guest user
+        // In a real implementation, this would interface with your auth system
+        const user = {
+            uid: 'temp_user_' + Date.now(),
+            email: null,
+            displayName: 'Guest User',
+            isAnonymous: true
+        };
+
+        // Update UI to reflect logged in state
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
+            window.SantrilogyApp.updateUserUI(user);
+            if (typeof window.SantrilogyApp.closeModal === 'function') {
+                window.SantrilogyApp.closeModal('authModal');
+            }
+            if (typeof window.SantrilogyApp.showToast === 'function') {
+                window.SantrilogyApp.showToast("Login berhasil! 🎉", "success");
+            }
+        }
+    } catch (e) {
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+            window.SantrilogyApp.showToast(e.message, "error");
+        }
+    }
+};
+
+window.firebaseEmailAuth = async function(email, password, mode) {
+    try {
+        // For now, simulate email authentication
+        // In a real implementation, this would call your auth API
+        const user = {
+            uid: 'temp_user_' + Date.now(),
+            email: email,
+            displayName: email.split('@')[0],
+            isAnonymous: false
+        };
+
+        // Update UI to reflect logged in state
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
+            window.SantrilogyApp.updateUserUI(user);
+            if (typeof window.SantrilogyApp.closeModal === 'function') {
+                window.SantrilogyApp.closeModal('authModal');
+            }
+            const successMsg = mode === 'register' ? "Akun berhasil dibuat! 🎉" : "Selamat datang kembali! 👋";
+            if (typeof window.SantrilogyApp.showToast === 'function') {
+                window.SantrilogyApp.showToast(successMsg, "success");
+            }
+        }
+    } catch (e) {
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+            window.SantrilogyApp.showToast(e.message, "error");
+        }
+    }
+};
+
+window.firebaseLogout = async function() {
+    try {
+        // Update UI to reflect logged out state
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
+            window.SantrilogyApp.updateUserUI(null); // null means logged out
+            if (typeof window.SantrilogyApp.showToast === 'function') {
+                window.SantrilogyApp.showToast("Sampai jumpa! 👋", "success");
+            }
+        }
+    } catch (e) {
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+            window.SantrilogyApp.showToast(e.message, "error");
+        }
+    }
+};
