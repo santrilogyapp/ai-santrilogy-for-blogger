@@ -2598,19 +2598,224 @@
                 } else {
                     // Jika fungsi init tidak ditemukan, panggil komponen utama satu per satu
                     try {
-                        if (typeof window.cacheElements === 'function') window.cacheElements();
-                        if (typeof window.initializeLibraries === 'function') window.initializeLibraries();
-                        if (typeof window.loadPreferences === 'function') window.loadPreferences();
-                        if (typeof window.setupEventListeners === 'function') window.setupEventListeners();
-                        if (typeof window.setupFeedbackTimer === 'function') window.setupFeedbackTimer();
-                        if (typeof window.setupSmartHeader === 'function') window.setupSmartHeader();
+                        console.log('Santrilogy: Memanggil cacheElements...');
+                        if (typeof window.cacheElements === 'function') {
+                            window.cacheElements();
+                            console.log('Santrilogy: cacheElements selesai');
+                        }
+
+                        console.log('Santrilogy: Memanggil initializeLibraries...');
+                        if (typeof window.initializeLibraries === 'function') {
+                            window.initializeLibraries();
+                            console.log('Santrilogy: initializeLibraries selesai');
+                        }
+
+                        console.log('Santrilogy: Memanggil loadPreferences...');
+                        if (typeof window.loadPreferences === 'function') {
+                            window.loadPreferences();
+                            console.log('Santrilogy: loadPreferences selesai');
+                        }
+
+                        console.log('Santrilogy: Memanggil setupEventListeners...');
+                        if (typeof window.setupEventListeners === 'function') {
+                            window.setupEventListeners();
+                            console.log('Santrilogy: setupEventListeners selesai');
+                        } else {
+                            console.warn('Santrilogy: setupEventListeners tidak ditemukan');
+                        }
+
+                        console.log('Santrilogy: Memanggil setupFeedbackTimer...');
+                        if (typeof window.setupFeedbackTimer === 'function') {
+                            window.setupFeedbackTimer();
+                            console.log('Santrilogy: setupFeedbackTimer selesai');
+                        }
+
+                        console.log('Santrilogy: Memanggil setupSmartHeader...');
+                        if (typeof window.setupSmartHeader === 'function') {
+                            window.setupSmartHeader();
+                            console.log('Santrilogy: setupSmartHeader selesai');
+                        }
 
                         // Pastikan UI user diupdate
+                        console.log('Santrilogy: Memanggil updateUserUI...');
                         if (typeof window.updateUserUI === 'function') {
                             window.updateUserUI(null); // Tampilkan sebagai guest
+                            console.log('Santrilogy: updateUserUI selesai');
                         }
 
                         console.log('Santrilogy: Inisialisasi komponen selesai');
+
+                        // Menambahkan pengecekan tambahan untuk memastikan event listener terpasang
+                        setTimeout(function() {
+                            console.log('Santrilogy: Mengecek apakah event listener terpasang...');
+
+                            // Cek apakah tombol-tombol utama memiliki event listener
+                            var sendBtn = document.getElementById('sendBtn');
+                            var menuToggle = document.getElementById('menuToggle');
+                            var newChatBtn = document.getElementById('newChatBtn');
+                            var settingsBtn = document.getElementById('settingsBtn');
+                            var quickPrompts = document.getElementById('quickPrompts');
+
+                            if (sendBtn) {
+                                console.log('Santrilogy: Send button ditemukan, cek apakah bisa diklik...');
+                                // Tambahkan event listener manual sebagai fallback
+                                if (!sendBtn.getAttribute('data-listener-added')) {
+                                    sendBtn.addEventListener('click', function() {
+                                        if (typeof window.sendMessage === 'function') {
+                                            window.sendMessage();
+                                        } else {
+                                            console.error('Santrilogy: Fungsi sendMessage tidak ditemukan');
+                                        }
+                                    });
+                                    sendBtn.setAttribute('data-listener-added', 'true');
+                                    console.log('Santrilogy: Fallback event listener ditambahkan ke sendBtn');
+                                }
+                            }
+
+                            if (menuToggle && !menuToggle.getAttribute('data-listener-added')) {
+                                menuToggle.addEventListener('click', function() {
+                                    if (typeof window.toggleSidebar === 'function') {
+                                        window.toggleSidebar(true);
+                                    }
+                                });
+                                menuToggle.setAttribute('data-listener-added', 'true');
+                                console.log('Santrilogy: Fallback event listener ditambahkan ke menuToggle');
+                            }
+
+                            if (newChatBtn && !newChatBtn.getAttribute('data-listener-added')) {
+                                newChatBtn.addEventListener('click', function() {
+                                    if (typeof window.startNewChat === 'function') {
+                                        window.startNewChat();
+                                    }
+                                });
+                                newChatBtn.setAttribute('data-listener-added', 'true');
+                                console.log('Santrilogy: Fallback event listener ditambahkan ke newChatBtn');
+                            }
+
+                            if (settingsBtn && !settingsBtn.getAttribute('data-listener-added')) {
+                                settingsBtn.addEventListener('click', function() {
+                                    if (typeof window.SantrilogyApp !== 'undefined' && typeof window.SantrilogyApp.openModal === 'function') {
+                                        window.SantrilogyApp.openModal('settingsModal');
+                                    }
+                                });
+                                settingsBtn.setAttribute('data-listener-added', 'true');
+                                console.log('Santrilogy: Fallback event listener ditambahkan ke settingsBtn');
+                            }
+
+                            if (quickPrompts && !quickPrompts.hasAttribute('data-listener-added')) {
+                                quickPrompts.addEventListener('click', function(e) {
+                                    var prompt = e.target.closest('.quick-prompt');
+                                    if (prompt && prompt.dataset && prompt.dataset.prompt) {
+                                        if (typeof window.usePrompt === 'function') {
+                                            window.usePrompt(prompt.dataset.prompt);
+                                        }
+                                    }
+                                });
+                                quickPrompts.setAttribute('data-listener-added', 'true');
+                                console.log('Santrilogy: Fallback event listener ditambahkan ke quickPrompts');
+                            }
+                        }, 1000); // Delay 1 detik untuk memastikan semuanya selesai
+
+                        // Tambahkan pengecekan keberadaan fungsi-fungsi penting dan buat fallback jika perlu
+                        setTimeout(function() {
+                            console.log('Santrilogy: Mengecek keberadaan fungsi-fungsi penting...');
+
+                            // Cek dan buat fallback untuk fungsi-fungsi penting jika tidak ditemukan
+                            if (typeof window.sendMessage !== 'function') {
+                                window.sendMessage = function() {
+                                    console.error('Santrilogy: Fungsi sendMessage tidak ditemukan, fallback diaktifkan');
+                                    var inputField = document.getElementById('inputField');
+                                    if (inputField) {
+                                        var text = inputField.value.trim();
+                                        if (text) {
+                                            console.log('Santrilogy: Pesan dari fallback:', text);
+                                            // Tampilkan pesan error di UI
+                                            if (typeof window.showToast === 'function') {
+                                                window.showToast('Fungsi kirim pesan belum siap', 'error');
+                                            }
+                                        }
+                                    }
+                                };
+                                console.log('Santrilogy: Fallback sendMessage ditambahkan');
+                            }
+
+                            if (typeof window.startNewChat !== 'function') {
+                                window.startNewChat = function() {
+                                    console.error('Santrilogy: Fungsi startNewChat tidak ditemukan, fallback diaktifkan');
+                                    if (typeof window.startNewChat !== 'undefined') {
+                                        // Gunakan fungsi aslinya jika tiba-tiba muncul
+                                        return window.startNewChat();
+                                    }
+                                    // Fallback sederhana
+                                    var welcomeScreen = document.getElementById('welcomeScreen');
+                                    var messagesContainer = document.getElementById('messagesContainer');
+                                    if (welcomeScreen) welcomeScreen.style.display = 'flex';
+                                    if (messagesContainer) messagesContainer.style.display = 'none';
+                                    if (messagesContainer) messagesContainer.classList.remove('active');
+                                    if (typeof window.showToast === 'function') {
+                                        window.showToast('Mulai diskusi baru', 'success');
+                                    }
+                                };
+                                console.log('Santrilogy: Fallback startNewChat ditambahkan');
+                            }
+
+                            if (typeof window.toggleSidebar !== 'function') {
+                                window.toggleSidebar = function(show) {
+                                    var sidebar = document.getElementById('sidebar');
+                                    var sidebarBackdrop = document.getElementById('sidebarBackdrop');
+                                    if (sidebar) {
+                                        sidebar.classList.toggle('active', show);
+                                    }
+                                    if (sidebarBackdrop) {
+                                        sidebarBackdrop.classList.toggle('active', show);
+                                    }
+                                };
+                                console.log('Santrilogy: Fallback toggleSidebar ditambahkan');
+                            }
+
+                            if (typeof window.usePrompt !== 'function') {
+                                window.usePrompt = function(promptText) {
+                                    var inputField = document.getElementById('inputField');
+                                    if (inputField) {
+                                        inputField.value = promptText;
+                                        // Fokus dan mungkin kirim otomatis
+                                        inputField.focus();
+                                        // Coba panggil fungsi sendMessage jika tersedia
+                                        if (typeof window.sendMessage === 'function') {
+                                            setTimeout(function() {
+                                                window.sendMessage();
+                                            }, 100);
+                                        }
+                                    }
+                                };
+                                console.log('Santrilogy: Fallback usePrompt ditambahkan');
+                            }
+
+                            // Cek apakah inputField memiliki event listener
+                            var inputField = document.getElementById('inputField');
+                            if (inputField && !inputField.getAttribute('data-input-listener-added')) {
+                                // Setup event listener untuk input field
+                                inputField.addEventListener('input', function() {
+                                    if (typeof window.handleInput === 'function') {
+                                        window.handleInput();
+                                    }
+                                });
+
+                                inputField.addEventListener('keydown', function(e) {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        if (typeof window.sendMessage === 'function') {
+                                            window.sendMessage();
+                                        }
+                                    }
+                                });
+
+                                inputField.setAttribute('data-input-listener-added', 'true');
+                                console.log('Santrilogy: Input event listener ditambahkan');
+                            }
+
+                            console.log('Santrilogy: Pengecekan fungsi-fungsi penting selesai');
+                        }, 1500); // Delay 1.5 detik untuk memberi waktu lebih
                     } catch (e) {
                         console.error('Santrilogy: Error saat inisialisasi komponen:', e);
                     }
