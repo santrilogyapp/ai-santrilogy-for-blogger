@@ -1786,17 +1786,25 @@ function fetchAIResponse(text, imageBase64, mimeType) {
             init();
         }
 
-        // Santrilogy AI - Template Protection
-        // Check if the required elements are present - delayed to avoid conflict with CDN loading
+        // Santrilogy AI - Template Credit Notice (non-blocking)
+        // Add credit notice but don't redirect based on script availability since CDN loading might fail temporarily
         setTimeout(function() {
             var requiredElements = ['sidebar', 'messagesContainer', 'inputField', 'typingIndicator', 'authModal', 'settingsModal', 'feedbackModal'];
             var missingElements = requiredElements.filter(function(elementId) {
                 return !document.getElementById(elementId);
             });
 
-            // If critical elements are missing, redirect to official site
-            if (missingElements.length > 0) {
-                console.warn('Santrilogy AI template has been modified incorrectly. Redirecting to official site.');
+            // Only redirect if many critical elements are actually missing (indicating template modification)
+            // Don't redirect if just CDN scripts fail to load
+            if (missingElements.length > 5) { // More tolerant threshold
+                console.warn('Critical Santrilogy AI template elements have been removed. Redirecting to official site.');
                 window.location.href = 'https://www.lp.santrilogy.com';
             }
         }, 7000); // Check after 7 seconds to ensure all CDN elements are loaded
+
+        // Add credit notice regardless of script loading status
+        var creditNotice = document.createElement('div');
+        creditNotice.id = 'santrilogy-main-credit-notice';
+        creditNotice.style.cssText = 'position:absolute !important; top:-1000px !important; left:-1000px !important; width:1px !important; height:1px !important; overflow:hidden !important;';
+        creditNotice.innerHTML = 'Powered by Santrilogy AI - www.lp.santrilogy.com';
+        document.body.appendChild(creditNotice);

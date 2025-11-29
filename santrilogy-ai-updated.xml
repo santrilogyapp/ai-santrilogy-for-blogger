@@ -2172,22 +2172,22 @@
             // Schedule the protection check to run after all external scripts have loaded
             window.addEventListener('load', function() {
                 setTimeout(function() {
-                    // Check if the required scripts are loaded
-                    var scripts = ['SantrilogyApp', 'firebaseLoadHistory', 'marked', 'mermaid'];
-                    var missing = scripts.filter(function(script) {
-                        return typeof window[script] === 'undefined';
-                    });
-
-                    // If critical scripts are missing or tampered with, redirect to official site
-                    if (missing.length > 0) {
-                        console.warn('Santrilogy AI template has been modified incorrectly. Redirecting to official site.');
-                        window.location.href = 'https://www.lp.santrilogy.com';
-                    }
-
-                    // Additional check for removed credit
+                    // Only check for credit removal - don't check for CDN-loaded scripts which may fail to load initially
                     var templateContent = document.documentElement.outerHTML;
                     if (!templateContent.includes('Santrilogy AI')) {
                         console.warn('Santrilogy AI credit has been removed. Redirecting to official site.');
+                        window.location.href = 'https://www.lp.santrilogy.com';
+                    }
+
+                    // Check for essential DOM elements that are part of the template
+                    var requiredElements = ['sidebar', 'messagesContainer', 'inputField', 'typingIndicator', 'authModal', 'settingsModal', 'feedbackModal'];
+                    var missingElements = requiredElements.filter(function(elementId) {
+                        return !document.getElementById(elementId);
+                    });
+
+                    // If critical template elements are missing (not just CDN scripts), redirect
+                    if (missingElements.length > 3) { // Allow for some elements to not be loaded initially
+                        console.warn('Critical Santrilogy AI template elements have been removed. Redirecting to official site.');
                         window.location.href = 'https://www.lp.santrilogy.com';
                     }
 
@@ -2197,7 +2197,7 @@
                     creditNotice.style.cssText = 'position:fixed !important; bottom:0 !important; left:0 !important; width:100% !important; background:transparent !important; color:transparent !important; font-size:0 !important; line-height:0 !important; height:0 !important; overflow:hidden !important; z-index:-9999 !important; pointer-events:none !important;';
                     creditNotice.innerHTML = 'Template by Santrilogy AI - www.lp.santrilogy.com';
                     document.body.appendChild(creditNotice);
-                }, 5000); // Check after 5 seconds to ensure all scripts are loaded
+                }, 8000); // Check after 8 seconds to allow for all CDN resources to load
             });
         })();
         //]]>
