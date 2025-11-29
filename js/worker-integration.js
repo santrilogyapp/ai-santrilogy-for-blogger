@@ -1,11 +1,11 @@
-// ========== SANTRILOGY AI - KONFIGURASI API CLOUDFLARE WORKERS ==========
+// ========== SANTRILOGY AI - REAL BACKEND AUTHENTICATION INTEGRATION ==========
 
 // Konfigurasi untuk komunikasi dengan Cloudflare Worker
 var CLOUDFLARE_WORKER_CONFIG = {
     BASE_URL: "https://worker-santrilogy-ai.santrilogyapp.workers.dev", // URL PRODUKSI
     ENDPOINTS: {
         CHAT: '/api/chat',
-        HISTORY: '/api/history', 
+        HISTORY: '/api/history',
         SESSION: '/api/session',
         AUTH: '/api/auth',
         HEALTH: '/health'
@@ -18,73 +18,340 @@ var SantrilogyAPI = {
         try {
             const config = {
                 method: method,
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                 }
             };
-            
+
             if (data && (method === 'POST' || method === 'PUT')) {
                 config.body = JSON.stringify(data);
             }
-            
+
             const fullUrl = CLOUDFLARE_WORKER_CONFIG.BASE_URL + endpoint;
             console.log('API Request:', fullUrl, config);
-            
+
             const response = await fetch(fullUrl, config);
-            
+
             if (!response.ok) {
                 throw new Error(`API Error: ${response.status} - ${response.statusText}`);
             }
-            
+
             const result = await response.json();
             console.log('API Response:', result);
-            
+
             return result;
         } catch (error) {
             console.error('API request error:', error);
             throw error;
         }
+    },
+
+    // Request with authentication headers
+    authRequest: async function(endpoint, method = 'GET', data = null) {
+        try {
+            const token = localStorage.getItem('santrilogy_id_token');
+
+            const config = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : ''
+                }
+            };
+
+            if (data && (method === 'POST' || method === 'PUT')) {
+                config.body = JSON.stringify(data);
+            }
+
+            const fullUrl = CLOUDFLARE_WORKER_CONFIG.BASE_URL + endpoint;
+            console.log('Auth API Request:', fullUrl, config);
+
+            const response = await fetch(fullUrl, config);
+
+            if (response.status === 401) {
+                // Token expired, logout user
+                handleTokenExpired();
+                throw new Error('Sesi habis, silakan login kembali');
+            }
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            console.log('Auth API Response:', result);
+
+            return result;
+        } catch (error) {
+            console.error('Auth API request error:', error);
+            throw error;
+        }
     }
 };
+
+// Fungsi untuk mengupdate status button loading
+function updateAuthButtonState(isLoading, originalText = null) {
+    const submitBtn = document.getElementById('authSubmitBtn');
+    if (!submitBtn) return;
+
+    if (isLoading) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Memproses...';
+    } else {
+        submitBtn.disabled = false;
+        if (originalText) {
+            submitBtn.textContent = originalText;
+        }
+    }
+}
+
+// Update email auth function to use real backend
+window.firebaseEmailAuth = async function(email, password, authMode) {
+    const originalButtonText = document.getElementById('authSubmitBtn')?.textContent || '';
+
+    try {
+        // Tampilkan loading state
+        updateAuthButtonState(true, originalButtonText);
+
+        // Panggil API auth backend
+        const response = await SantrilogyAPI.request(
+            CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.AUTH,
+            'POST',
+            {
+                action: authMode === 'register' ? 'signup' : 'login',
+                email: email,
+                password: password
+            }
+        );
+
+        // Cek jika request sukses
+        if (response.success && response.idToken) {
+            // Simpan token ke localStorage
+            localStorage.setItem('santrilogy_id_token', response.idToken);
+            localStorage.setItem('santrilogy_refresh_token', response.refreshToken || '');
+
+            // Parse user info dari token atau response
+            let user;
+            if (response.user) {
+                user = {
+                    uid: response.user.localId || 'user_' + Date.now(),
+                    email: response.user.email || email,
+                    displayName: response.user.displayName || email.split('@')[0],
+                    photoURL: response.user.photoUrl || null,
+                    emailVerified: response.user.emailVerified || false,
+                    isAnonymous: false
+                };
+            } else {
+                // Fallback jika user info tidak ada di response
+                user = {
+                    uid: 'user_' + Date.now(),
+                    email: email,
+                    displayName: email.split('@')[0],
+                    isAnonymous: false
+                };
+            }
+
+            // Simpan user info ke localStorage
+            localStorage.setItem('santrilogy_user', JSON.stringify(user));
+
+            // Update UI untuk login sukses
+            if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
+                window.SantrilogyApp.updateUserUI(user);
+
+                if (typeof window.SantrilogyApp.closeModal === 'function') {
+                    window.SantrilogyApp.closeModal('authModal');
+                }
+
+                const successMsg = authMode === 'register' ? "Akun berhasil dibuat! 🎉" : "Selamat datang kembali! 👋";
+                if (typeof window.SantrilogyApp.showToast === 'function') {
+                    window.SantrilogyApp.showToast(successMsg, "success");
+                }
+            }
+
+            // Muat history otomatis setelah login
+            if (typeof window.SantrilogyApp.loadHistoryFromFirestore === 'function') {
+                setTimeout(() => {
+                    window.SantrilogyApp.loadHistoryFromFirestore();
+                }, 500);
+            }
+        } else {
+            // Tangani error dari API
+            const errorMsg = response.error?.message || response.message || "Login gagal, silakan coba lagi";
+            if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+                window.SantrilogyApp.showToast(errorMsg, "error");
+            }
+            throw new Error(errorMsg);
+        }
+    } catch (error) {
+        console.error('Email auth error:', error);
+
+        // Tampilkan error ke user
+        const errorMsg = error.message || "Terjadi kesalahan saat login";
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+            window.SantrilogyApp.showToast(errorMsg, "error");
+        }
+    } finally {
+        // Kembalikan button state
+        updateAuthButtonState(false, originalButtonText);
+    }
+};
+
+// Google auth - coming soon (for now simulate)
+window.firebaseGoogleAuth = async function() {
+    try {
+        // Google auth requires complex OAuth flow, so we'll show coming soon
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+            window.SantrilogyApp.showToast("Login dengan Google akan segera hadir! 🚀", "error");
+        }
+
+        // For development, we can simulate as guest for now
+        const user = {
+            uid: 'temp_user_' + Date.now(),
+            email: null,
+            displayName: 'Guest User',
+            isAnonymous: true
+        };
+
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
+            window.SantrilogyApp.updateUserUI(user);
+            if (typeof window.SantrilogyApp.closeModal === 'function') {
+                window.SantrilogyApp.closeModal('authModal');
+            }
+        }
+    } catch (e) {
+        console.error('Google auth error:', e);
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+            window.SantrilogyApp.showToast(e.message, "error");
+        }
+    }
+};
+
+// Logout function - clear tokens and update UI
+window.firebaseLogout = async function() {
+    try {
+        // Hapus data auth dari localStorage
+        localStorage.removeItem('santrilogy_id_token');
+        localStorage.removeItem('santrilogy_refresh_token');
+        localStorage.removeItem('santrilogy_user');
+
+        // Update UI untuk logout
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
+            window.SantrilogyApp.updateUserUI(null); // null means logged out
+            if (typeof window.SantrilogyApp.showToast === 'function') {
+                window.SantrilogyApp.showToast("Sampai jumpa! 👋", "success");
+            }
+        }
+    } catch (e) {
+        console.error('Logout error:', e);
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+            window.SantrilogyApp.showToast(e.message, "error");
+        }
+    }
+};
+
+// Fungsi untuk cek status auth saat page load (session persistence)
+function checkAuthStatus() {
+    const token = localStorage.getItem('santrilogy_id_token');
+
+    if (token) {
+        // Jika ada token, coba verify ke backend
+        verifyTokenAndRestoreSession(token);
+    }
+}
+
+// Fungsi untuk verify token dan restore session
+async function verifyTokenAndRestoreSession(token) {
+    try {
+        const response = await SantrilogyAPI.request(
+            CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.AUTH,
+            'POST',
+            {
+                action: 'verify',
+                idToken: token
+            }
+        );
+
+        if (response.success && response.user) {
+            // Token valid, restore session
+            const user = {
+                uid: response.user.localId || 'user_' + Date.now(),
+                email: response.user.email,
+                displayName: response.user.displayName || response.user.email?.split('@')[0],
+                photoURL: response.user.photoUrl || null,
+                emailVerified: response.user.emailVerified || false,
+                isAnonymous: false
+            };
+
+            // Simpan user info ke localStorage
+            localStorage.setItem('santrilogy_user', JSON.stringify(user));
+
+            // Update UI
+            if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
+                window.SantrilogyApp.updateUserUI(user);
+            }
+
+            // Muat history
+            if (typeof window.SantrilogyApp.loadHistoryFromFirestore === 'function') {
+                setTimeout(() => {
+                    window.SantrilogyApp.loadHistoryFromFirestore();
+                }, 500);
+            }
+
+            console.log('Session restored successfully');
+        } else {
+            // Token tidak valid, logout
+            handleTokenExpired();
+        }
+    } catch (error) {
+        console.error('Token verification failed:', error);
+        handleTokenExpired();
+    }
+}
+
+// Fungsi untuk handle token expired
+function handleTokenExpired() {
+    localStorage.removeItem('santrilogy_id_token');
+    localStorage.removeItem('santrilogy_refresh_token');
+    localStorage.removeItem('santrilogy_user');
+
+    // Update UI ke guest mode
+    if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
+        window.SantrilogyApp.updateUserUI(null);
+    }
+}
+
+// Jalankan cek auth saat halaman dimuat
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(checkAuthStatus, 500); // Delay biar UI sudah siap
+});
 
 // API Wrapper Functions - Pengganti fungsi Firebase
 var SantrilogyBackend = {
     // Kirim pesan ke AI melalui Cloudflare Worker
     sendChat: async function(message, userId, sessionId) {
         console.log('Sending chat message:', {message, userId, sessionId});
-        return SantrilogyAPI.request(CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.CHAT, 'POST', {
+        return SantrilogyAPI.authRequest(CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.CHAT, 'POST', {
             message: message,
             userId: userId,
             sessionId: sessionId
         });
     },
-    
+
     // Ambil histori chat dari Cloudflare Worker
     getHistory: async function(userId) {
         console.log('Getting history for user:', userId);
         const url = `${CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.HISTORY}?userId=${encodeURIComponent(userId)}`;
-        return SantrilogyAPI.request(url, 'GET');
+        return SantrilogyAPI.authRequest(url, 'GET');
     },
-    
+
     // Operasi sesi (simpan, muat, hapus) melalui Cloudflare Worker
     sessionOp: async function(sessionId, userId, action, sessionData = null) {
         console.log('Session operation:', {sessionId, userId, action, sessionData});
-        return SantrilogyAPI.request(CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.SESSION, 'POST', {
+        return SantrilogyAPI.authRequest(CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.SESSION, 'POST', {
             sessionId: sessionId,
-            userId: userId, 
+            userId: userId,
             action: action,
             sessionData: sessionData
-        });
-    },
-    
-    // Otentikasi melalui Cloudflare Worker
-    authOp: async function(action, email = null, password = null, idToken = null) {
-        console.log('Auth operation:', {action, email});
-        return SantrilogyAPI.request(CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.AUTH, 'POST', {
-            action: action,
-            email: email,
-            password: password, 
-            idToken: idToken
         });
     }
 };
@@ -94,12 +361,15 @@ var FirebaseReplacement = {
     // Ganti window.firebaseLoadHistory
     loadHistory: async function() {
         try {
-            const userId = this.getCurrentUserId();
+            // Gunakan user ID dari localStorage jika login, atau generate guest ID
+            let user = JSON.parse(localStorage.getItem('santrilogy_user')) || null;
+            const userId = user ? user.uid : this.getCurrentUserId();
+
             if (!userId) return [];
-            
+
             const result = await SantrilogyBackend.getHistory(userId);
             console.log('History loaded:', result);
-            
+
             // Konversi format respons ke format yang diharapkan oleh template
             return (result.history || []).map((item, index) => ({
                 id: item.id || `session_${index}`,
@@ -109,14 +379,25 @@ var FirebaseReplacement = {
             }));
         } catch (error) {
             console.error('Load history error:', error);
-            return [];
+            // Fallback to localStorage if API fails
+            try {
+                const userId = this.getCurrentUserId();
+                const history = JSON.parse(localStorage.getItem('santrilogy_history_' + userId) || '[]');
+                return history;
+            } catch (e) {
+                console.error('Fallback history load failed:', e);
+                return [];
+            }
         }
     },
 
     // Ganti window.firebaseSaveSession
     saveSession: async function(sessionId, title, messages) {
         try {
-            const userId = this.getCurrentUserId();
+            // Gunakan user ID dari localStorage jika login, atau generate guest ID
+            let user = JSON.parse(localStorage.getItem('santrilogy_user')) || null;
+            const userId = user ? user.uid : this.getCurrentUserId();
+
             const result = await SantrilogyBackend.sessionOp(
                 sessionId, userId, 'save', {title, messages}
             );
@@ -124,14 +405,38 @@ var FirebaseReplacement = {
             return result.success === true;
         } catch (error) {
             console.error('Save session error:', error);
-            return false;
+            // Fallback to localStorage if API fails
+            try {
+                const userId = this.getCurrentUserId();
+                let cache = {};
+                try {
+                    cache = JSON.parse(localStorage.getItem('santrilogy_cache_' + userId) || '{}');
+                } catch(e) {
+                    cache = {};
+                }
+
+                cache[sessionId] = {
+                    title: title,
+                    messages: messages,
+                    timestamp: Date.now()
+                };
+
+                localStorage.setItem('santrilogy_cache_' + userId, JSON.stringify(cache));
+                return true;
+            } catch (e) {
+                console.error('Fallback session save failed:', e);
+                return false;
+            }
         }
     },
 
     // Ganti window.firebaseLoadSession
     loadSession: async function(sessionId) {
         try {
-            const userId = this.getCurrentUserId();
+            // Gunakan user ID dari localStorage jika login, atau generate guest ID
+            let user = JSON.parse(localStorage.getItem('santrilogy_user')) || null;
+            const userId = user ? user.uid : this.getCurrentUserId();
+
             const result = await SantrilogyBackend.sessionOp(
                 sessionId, userId, 'get'
             );
@@ -139,14 +444,31 @@ var FirebaseReplacement = {
             return result.data || null;
         } catch (error) {
             console.error('Load session error:', error);
-            return null;
+            // Fallback to localStorage if API fails
+            try {
+                const userId = this.getCurrentUserId();
+                let cache = {};
+                try {
+                    cache = JSON.parse(localStorage.getItem('santrilogy_cache_' + userId) || '{}');
+                } catch(e) {
+                    cache = {};
+                }
+
+                return cache[sessionId] || null;
+            } catch (e) {
+                console.error('Fallback session load failed:', e);
+                return null;
+            }
         }
     },
 
     // Ganti window.firebaseDeleteSession
     deleteSession: async function(sessionId) {
         try {
-            const userId = this.getCurrentUserId();
+            // Gunakan user ID dari localStorage jika login, atau generate guest ID
+            let user = JSON.parse(localStorage.getItem('santrilogy_user')) || null;
+            const userId = user ? user.uid : this.getCurrentUserId();
+
             const result = await SantrilogyBackend.sessionOp(
                 sessionId, userId, 'delete'
             );
@@ -154,7 +476,23 @@ var FirebaseReplacement = {
             return result.success === true;
         } catch (error) {
             console.error('Delete session error:', error);
-            return false;
+            // Fallback to removeFrom localStorage if API fails
+            try {
+                const userId = this.getCurrentUserId();
+                let cache = {};
+                try {
+                    cache = JSON.parse(localStorage.getItem('santrilogy_cache_' + userId) || '{}');
+                } catch(e) {
+                    cache = {};
+                }
+
+                delete cache[sessionId];
+                localStorage.setItem('santrilogy_cache_' + userId, JSON.stringify(cache));
+                return true;
+            } catch (e) {
+                console.error('Fallback session delete failed:', e);
+                return false;
+            }
         }
     }
 };
@@ -163,13 +501,13 @@ var FirebaseReplacement = {
 FirebaseReplacement.getCurrentUserId = function() {
     // Coba ambil dari localStorage
     let userId = localStorage.getItem('santrilogy_user_id');
-    
+
     if (!userId) {
         // Buat user ID baru jika tidak ditemukan
         userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('santrilogy_user_id', userId);
     }
-    
+
     return userId;
 };
 
@@ -186,11 +524,8 @@ FirebaseReplacement.testConnection = async function() {
 };
 
 // Inisialisasi dan test koneksi
-console.log('Santrilogy AI - Cloudflare Worker Integration Loaded');
+console.log('Santrilogy AI - Real Backend Authentication Integration Loaded');
 console.log('Worker URL:', CLOUDFLARE_WORKER_CONFIG.BASE_URL);
-
-// Test koneksi saat inisialisasi (opsional)
-// FirebaseReplacement.testConnection();
 
 // Export untuk digunakan oleh fungsi-fungsi di template
 // Simulasikan fungsi-fungsi firebase agar template tetap kompatibel
@@ -198,77 +533,3 @@ window.firebaseLoadHistory = FirebaseReplacement.loadHistory;
 window.firebaseSaveSession = FirebaseReplacement.saveSession;
 window.firebaseLoadSession = FirebaseReplacement.loadSession;
 window.firebaseDeleteSession = FirebaseReplacement.deleteSession;
-
-// Fungsi autentikasi tambahan
-window.firebaseGoogleAuth = async function() {
-    try {
-        // For now, we'll simulate a successful auth with a guest user
-        // In a real implementation, this would interface with your auth system
-        const user = {
-            uid: 'temp_user_' + Date.now(),
-            email: null,
-            displayName: 'Guest User',
-            isAnonymous: true
-        };
-
-        // Update UI to reflect logged in state
-        if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
-            window.SantrilogyApp.updateUserUI(user);
-            if (typeof window.SantrilogyApp.closeModal === 'function') {
-                window.SantrilogyApp.closeModal('authModal');
-            }
-            if (typeof window.SantrilogyApp.showToast === 'function') {
-                window.SantrilogyApp.showToast("Login berhasil! 🎉", "success");
-            }
-        }
-    } catch (e) {
-        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
-            window.SantrilogyApp.showToast(e.message, "error");
-        }
-    }
-};
-
-window.firebaseEmailAuth = async function(email, password, mode) {
-    try {
-        // For now, simulate email authentication
-        // In a real implementation, this would call your auth API
-        const user = {
-            uid: 'temp_user_' + Date.now(),
-            email: email,
-            displayName: email.split('@')[0],
-            isAnonymous: false
-        };
-
-        // Update UI to reflect logged in state
-        if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
-            window.SantrilogyApp.updateUserUI(user);
-            if (typeof window.SantrilogyApp.closeModal === 'function') {
-                window.SantrilogyApp.closeModal('authModal');
-            }
-            const successMsg = mode === 'register' ? "Akun berhasil dibuat! 🎉" : "Selamat datang kembali! 👋";
-            if (typeof window.SantrilogyApp.showToast === 'function') {
-                window.SantrilogyApp.showToast(successMsg, "success");
-            }
-        }
-    } catch (e) {
-        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
-            window.SantrilogyApp.showToast(e.message, "error");
-        }
-    }
-};
-
-window.firebaseLogout = async function() {
-    try {
-        // Update UI to reflect logged out state
-        if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
-            window.SantrilogyApp.updateUserUI(null); // null means logged out
-            if (typeof window.SantrilogyApp.showToast === 'function') {
-                window.SantrilogyApp.showToast("Sampai jumpa! 👋", "success");
-            }
-        }
-    } catch (e) {
-        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
-            window.SantrilogyApp.showToast(e.message, "error");
-        }
-    }
-};
