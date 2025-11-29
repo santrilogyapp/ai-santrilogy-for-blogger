@@ -199,8 +199,9 @@ window.firebaseEmailAuth = async function(email, password, authMode) {
 // Google auth - redirect to worker for OAuth flow
 window.firebaseGoogleAuth = async function() {
     try {
-        // Redirect to worker for Google OAuth flow
-        const googleAuthUrl = CLOUDFLARE_WORKER_CONFIG.BASE_URL + CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.AUTH + '/google';
+        // Redirect to worker for Google OAuth flow, include origin for redirect
+        const origin = window.location.origin || window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '');
+        const googleAuthUrl = `${CLOUDFLARE_WORKER_CONFIG.BASE_URL}${CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.AUTH}/google?origin=${encodeURIComponent(origin)}`;
         window.location.href = googleAuthUrl;
     } catch (e) {
         console.error('Google auth redirect error:', e);

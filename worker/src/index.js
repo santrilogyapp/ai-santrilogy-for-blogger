@@ -68,6 +68,21 @@ export default {
  */
 async function handleGoogleAuthRedirect(request, env, headers) {
   try {
+    const url = new URL(request.url);
+    // Get the original origin from query parameter
+    const origin = url.searchParams.get('origin') || '';
+    let redirectOrigin = origin;
+
+    // Validate origin against allowed origins for security
+    const allowedOrigins = env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',') : [];
+    if (origin && !allowedOrigins.includes(origin)) {
+      // Use the first allowed origin as fallback if origin is not in whitelist
+      redirectOrigin = allowedOrigins[0] || 'https://santrilogy-ai.blogspot.com';
+    } else if (!redirectOrigin) {
+      // Use first allowed origin if no origin provided
+      redirectOrigin = allowedOrigins[0] || 'https://santrilogy-ai.blogspot.com';
+    }
+
     // Generate a random state parameter for security
     const state = generateRandomString(32);
     const nonce = generateRandomString(32);
@@ -76,13 +91,15 @@ async function handleGoogleAuthRedirect(request, env, headers) {
     // For now, we'll use URL parameters but in production, should use secure storage
     const redirectUri = `${env.WORKER_URL}/api/auth/callback`;
 
+    // Create state that includes the redirect origin for secure return
+    const stateWithOrigin = btoa(JSON.stringify({ state, origin: redirectOrigin, nonce }));
+
     const googleAuthUrl = new URL('https://accounts.google.com/oauth/authorize');
     googleAuthUrl.searchParams.set('response_type', 'code');
     googleAuthUrl.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
     googleAuthUrl.searchParams.set('redirect_uri', redirectUri);
     googleAuthUrl.searchParams.set('scope', 'openid email profile');
-    googleAuthUrl.searchParams.set('state', state);
-    googleAuthUrl.searchParams.set('nonce', nonce);
+    googleAuthUrl.searchParams.set('state', stateWithOrigin); // Include origin in state
 
     // Redirect to Google OAuth
     return new Response(null, {
@@ -110,10 +127,35 @@ async function handleGoogleAuthCallback(request, env, headers) {
     const state = url.searchParams.get('state');
 
     if (!code) {
-      return new Response('Authorization code not found', { 
+      return new Response('Authorization code not found', {
         status: 400,
         headers: { 'Content-Type': 'text/plain' }
       });
+    }
+
+    // Decode the state to get the original origin
+    let redirectOrigin = 'https://santrilogy-ai.blogspot.com'; // default fallback
+    let originalState = '';
+
+    if (state) {
+      try {
+        // The state was encoded as base64 JSON containing origin
+        const stateObj = JSON.parse(atob(state));
+        if (stateObj && stateObj.origin) {
+          // Validate origin against allowed origins for security
+          const allowedOrigins = env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',') : [];
+          if (allowedOrigins.includes(stateObj.origin)) {
+            redirectOrigin = stateObj.origin;
+          } else {
+            console.warn('Untrusted origin in state parameter, using default:', stateObj.origin);
+          }
+        }
+        if (stateObj && stateObj.state) {
+          originalState = stateObj.state; // This is the original random state for validation
+        }
+      } catch (e) {
+        console.error('Error parsing state parameter:', e);
+      }
     }
 
     // Exchange authorization code for tokens
@@ -178,10 +220,6 @@ async function handleGoogleAuthCallback(request, env, headers) {
 
     const firebaseData = await firebaseTokenResponse.json();
 
-    // Get the allowed origin (first one as default)
-    const allowedOrigins = env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',') : [];
-    const redirectOrigin = allowedOrigins[0] || 'https://santrilogy-ai.blogspot.com';
-
     // Create user data object
     const userData = {
       uid: firebaseData.localId,
@@ -195,7 +233,7 @@ async function handleGoogleAuthCallback(request, env, headers) {
     // Encode the user data to pass in the URL hash
     const encodedUser = encodeURIComponent(JSON.stringify(userData));
 
-    // Redirect back to the frontend with the token in the hash
+    // Redirect back to the original origin with the token in the hash
     const redirectUrl = `${redirectOrigin}/#token=${firebaseData.idToken}&user=${encodedUser}`;
 
     return new Response(null, {
