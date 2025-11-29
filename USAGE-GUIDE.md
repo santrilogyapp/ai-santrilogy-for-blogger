@@ -66,13 +66,13 @@ Untuk stabilitas, gunakan versi tertentu:
 <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/main.js'/>
 ```
 
-## 5. Arsitektur Aman dengan Cloudflare Workers (Direkomendasikan untuk Produksi)
+## 5. Arsitektur Aman dengan Backend API (Direkomendasikan untuk Produksi)
 
-Untuk keamanan maksimal di lingkungan produksi, disarankan menggunakan Cloudflare Workers sebagai lapisan API yang aman. Ini memindahkan semua kredensial sensitif dari sisi klien ke backend yang dilindungi.
+Untuk keamanan maksimal di lingkungan produksi, disarankan menggunakan backend API sebagai lapisan aman. Ini memindahkan semua kredensial sensitif dari sisi klien ke server yang dilindungi.
 
 ### Ikhtisar Arsitektur
 ```
-Browser (Template Blogger) → Cloudflare Workers → Firebase/Backend Services
+Browser (Template Blogger) → Backend API → Firebase/Backend Services
 ```
 
 ### Keunggulan:
@@ -82,39 +82,40 @@ Browser (Template Blogger) → Cloudflare Workers → Firebase/Backend Services
 - Pembatasan akses origin
 - Kemampuan untuk menambahkan rate limiting
 
-### Setup Dasar:
+### Platform yang Didukung:
 
-1. **Buat Worker Baru:**
-   ```bash
-   npm install -g wrangler
-   wrangler init santrilogy-ai-worker
-   ```
+1. **Cloudflare Workers** (Performa terbaik)
+   - Tanpa perlu Wrangler CLI: bisa ditulis langsung di dashboard
+   - Serverless dan cepat
+   - Biaya rendah
+   - **URL Production Contoh**: `https://worker-santrilogy-ai.santrilogyapp.workers.dev`
 
-2. **Konfigurasi Environment Variables di `wrangler.toml`:**
-   ```toml
-   [vars]
-   FIREBASE_API_KEY = "kunci_api_firebase_anda"
-   FIREBASE_PROJECT_ID = "id_proyek_firebase_anda"
-   AI_WORKER_URL = "https://worker-ai-anda.namespace.workers.dev"
-   ```
+2. **Vercel** (Paling mudah untuk Next.js)
+   - Deploy dengan `vercel` command
+   - Edge functions tersedia
 
-3. **Update Template Blogger:**
-   - Hapus skrip Firebase dari template
-   - Gunakan endpoint worker untuk semua operasi data
-   - Lihat `worker/safe-template.js` untuk contoh implementasi
+3. **Netlify Functions** (Bagus untuk pengguna Netlify)
+   - Mudah diintegrasikan
+   - Serverless functions
 
-4. **Deploy Worker:**
-   ```bash
-   wrangler deploy
-   ```
+4. **Express.js Server** (Penuh kendali)
+   - Deploy ke berbagai platform: Railway, Render, Heroku, dll
+   - Konfigurasi penuh
 
-### Endpoint API yang Tersedia:
+### Endpoint API Standar:
 - `POST /api/chat` - Kirim pesan ke AI
 - `GET /api/history` - Ambil histori percakapan
 - `POST /api/session` - Operasi sesi (simpan, muat, hapus)
 - `POST /api/auth` - Operasi otentikasi
 
-Untuk detail lengkap implementasi, lihat folder `worker/` dalam repositori ini.
+### Setup untuk Berbagai Platform:
+
+Lihat `api-examples/deployment-options.md` untuk panduan lengkap deployment ke berbagai platform.
+
+### Update Template Blogger:
+- Ganti konfigurasi URL API di template
+- Hapus semua referensi Firebase langsung
+- Gunakan `api-examples/vercel-api.js` sebagai contoh backend
 
 ## Konfigurasi Tambahan
 
