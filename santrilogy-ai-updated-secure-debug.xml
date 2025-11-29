@@ -2194,7 +2194,7 @@
                             headers: { 'Content-Type': 'application/json' }
                         };
 
-                        if (data != null) {
+                        if (data) {
                             if (method === 'POST') {
                                 config.body = JSON.stringify(data);
                             } else if (method === 'PUT') {
@@ -2259,7 +2259,7 @@
                             var messageCount = 0;
                             if (item) {
                                 if (item.messages) {
-                                    if (item.messages.length != null && typeof item.messages.length != 'undefined') {
+                                    if (item.messages && item.messages.length) {
                                         messageCount = item.messages.length;
                                     }
                                 }
@@ -2322,10 +2322,10 @@
 
             FirebaseReplacement.getCurrentUserId = function() {
                 try {
-                    var userId = (typeof localStorage == 'object' && localStorage != null) ? localStorage.getItem('santrilogy_user_id') : null;
+                    var userId = (typeof localStorage == 'object' && localStorage) ? localStorage.getItem('santrilogy_user_id') : null;
                     if (!userId) {
                         userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                        if (typeof localStorage == 'object' && localStorage != null) {
+                        if (typeof localStorage == 'object' && localStorage) {
                             localStorage.setItem('santrilogy_user_id', userId);
                         }
                     }
