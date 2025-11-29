@@ -635,3 +635,38 @@ if (document.readyState === 'complete') {
 if (typeof window.checkAuthStatus === 'function' && typeof window.checkForTokenInUrl === 'function') {
     setTimeout(ensureAuthFunctionsAreReady, 10);
 }
+
+// Tambahkan fungsi cek untuk main.js (jika digunakan sebelum inisialisasi selesai)
+if (typeof window.firebaseEmailAuth !== 'function') {
+    window.firebaseEmailAuth = async function(email, password, authMode) {
+        console.warn('Authentication system not ready yet. Please try again in a moment.');
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+            window.SantrilogyApp.showToast('Sistem autentikasi sedang dimuat...', 'error');
+        }
+    };
+}
+
+if (typeof window.firebaseGoogleAuth !== 'function') {
+    window.firebaseGoogleAuth = async function() {
+        console.warn('Authentication system not ready yet. Please try again in a moment.');
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+            window.SantrilogyApp.showToast('Sistem autentikasi sedang dimuat...', 'error');
+        }
+    };
+}
+
+if (typeof window.firebaseLogout !== 'function') {
+    window.firebaseLogout = async function() {
+        console.warn('Authentication system not ready yet. Please try again in a moment.');
+        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+            window.SantrilogyApp.showToast('Sistem autentikasi sedang dimuat...', 'error');
+        }
+    };
+}
+
+// Tandai bahwa auth system sedang dimuat
+window.authSystemStatus = {
+    ready: false,
+    loading: true,
+    timestamp: Date.now()
+};
