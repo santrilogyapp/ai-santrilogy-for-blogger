@@ -18,6 +18,10 @@ All notable changes to the Santrilogy AI for Blogger project will be documented 
 - Secure Blogger template version (santrilogy-ai-updated-secure.xml) without Firebase exposure
 - Cloudflare Worker API integration code embedded directly in template
 
+### Removed
+- Insecure template (santrilogy-ai-updated.xml) to prevent accidental use of exposed credentials
+- All Firebase SDK references from client-side code in production template
+
 ### Fixed
 - XML parsing error by properly encoding angle brackets in attribute values (&lt; and &gt;)
 - JavaScript module compatibility issue by refactoring Firebase ES6 imports to global namespace
