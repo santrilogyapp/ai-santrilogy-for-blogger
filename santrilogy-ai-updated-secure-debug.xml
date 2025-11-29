@@ -2749,76 +2749,71 @@
                         setTimeout(function() {
                             console.log('Santrilogy: Mengecek keberadaan fungsi-fungsi penting...');
 
+                            // Coba cari fungsi-fungsi penting dari objek SantrilogyApp jika tersedia
+                            if (typeof window.SantrilogyApp !== 'undefined') {
+                                console.log('Santrilogy: SantrilogyApp ditemukan, mencari fungsi-fungsi di dalamnya...');
+
+                                // Ekspos fungsi-fungsi dari SantrilogyApp ke window jika belum ada
+                                if (typeof window.sendMessage !== 'function' && typeof window.SantrilogyApp.sendMessage === 'function') {
+                                    window.sendMessage = window.SantrilogyApp.sendMessage;
+                                    console.log('Santrilogy: Fungsi sendMessage diambil dari SantrilogyApp');
+                                }
+
+                                if (typeof window.startNewChat !== 'function' && typeof window.SantrilogyApp.startNewChat === 'function') {
+                                    window.startNewChat = window.SantrilogyApp.startNewChat;
+                                    console.log('Santrilogy: Fungsi startNewChat diambil dari SantrilogyApp');
+                                }
+
+                                if (typeof window.usePrompt !== 'function' && typeof window.SantrilogyApp.usePrompt === 'function') {
+                                    window.usePrompt = window.SantrilogyApp.usePrompt;
+                                    console.log('Santrilogy: Fungsi usePrompt diambil dari SantrilogyApp');
+                                }
+                            }
+
                             // Cek dan buat fallback untuk fungsi-fungsi penting jika tidak ditemukan
-                            if (typeof window.sendMessage !== 'function') {
-                                window.sendMessage = function() {
-                                    console.error('Santrilogy: Fungsi sendMessage tidak ditemukan, fallback diaktifkan');
-                                    var inputField = document.getElementById('inputField');
-                                    if (inputField) {
-                                        var text = inputField.value.trim();
-                                        if (text) {
-                                            console.log('Santrilogy: Pesan dari fallback:', text);
-                                            // Tampilkan pesan error di UI
-                                            if (typeof window.showToast === 'function') {
-                                                window.showToast('Fungsi kirim pesan belum siap', 'error');
+                            var functionsToCheck = [
+                                'sendMessage', 'startNewChat', 'toggleSidebar', 'usePrompt',
+                                'handleInput', 'showToast', 'openModal', 'closeModal', 'loadChatHistory'
+                            ];
+
+                            functionsToCheck.forEach(function(funcName) {
+                                if (typeof window[funcName] !== 'function') {
+                                    // Cek apakah fungsi tersembunyi di dalam objek state atau lainnya
+                                    if (typeof window.state !== 'undefined' && typeof window.state[funcName] === 'function') {
+                                        window[funcName] = window.state[funcName];
+                                        console.log('Santrilogy: Fungsi ' + funcName + ' ditemukan di state dan diexpos');
+                                    } else if (typeof window.elements !== 'undefined' && typeof window.elements.container !== 'undefined') {
+                                        // Beberapa fungsi mungkin tersembunyi di tempat lain, coba cari
+                                        console.warn('Santrilogy: Fungsi ' + funcName + ' tidak ditemukan di tempat yang diharapkan');
+                                    }
+
+                                    // Jika masih tidak ditemukan, buat fallback
+                                    if (typeof window[funcName] !== 'function') {
+                                        window[funcName] = function() {
+                                            console.error('Santrilogy: Fungsi ' + funcName + ' tidak ditemukan, fallback diaktifkan');
+                                            if (funcName === 'showToast' && arguments.length > 0) {
+                                                console.log('Santrilogy: Toast message -', arguments[0]);
+                                            } else if (funcName === 'sendMessage') {
+                                                // Fallback khusus untuk sendMessage
+                                                var inputField = document.getElementById('inputField');
+                                                if (inputField) {
+                                                    var text = inputField.value.trim();
+                                                    if (text) {
+                                                        console.log('Santrilogy: Mengirim pesan fallback:', text);
+                                                        // Tampilkan pesan error bahwa fungsi utama tidak berfungsi
+                                                        if (typeof window.showToast === 'function') {
+                                                            window.showToast('Fungsi kirim pesan utama belum siap', 'error');
+                                                        }
+                                                    }
+                                                }
                                             }
-                                        }
+                                        };
+                                        console.log('Santrilogy: Fallback ' + funcName + ' ditambahkan');
                                     }
-                                };
-                                console.log('Santrilogy: Fallback sendMessage ditambahkan');
-                            }
-
-                            if (typeof window.startNewChat !== 'function') {
-                                window.startNewChat = function() {
-                                    console.error('Santrilogy: Fungsi startNewChat tidak ditemukan, fallback diaktifkan');
-                                    if (typeof window.startNewChat !== 'undefined') {
-                                        // Gunakan fungsi aslinya jika tiba-tiba muncul
-                                        return window.startNewChat();
-                                    }
-                                    // Fallback sederhana
-                                    var welcomeScreen = document.getElementById('welcomeScreen');
-                                    var messagesContainer = document.getElementById('messagesContainer');
-                                    if (welcomeScreen) welcomeScreen.style.display = 'flex';
-                                    if (messagesContainer) messagesContainer.style.display = 'none';
-                                    if (messagesContainer) messagesContainer.classList.remove('active');
-                                    if (typeof window.showToast === 'function') {
-                                        window.showToast('Mulai diskusi baru', 'success');
-                                    }
-                                };
-                                console.log('Santrilogy: Fallback startNewChat ditambahkan');
-                            }
-
-                            if (typeof window.toggleSidebar !== 'function') {
-                                window.toggleSidebar = function(show) {
-                                    var sidebar = document.getElementById('sidebar');
-                                    var sidebarBackdrop = document.getElementById('sidebarBackdrop');
-                                    if (sidebar) {
-                                        sidebar.classList.toggle('active', show);
-                                    }
-                                    if (sidebarBackdrop) {
-                                        sidebarBackdrop.classList.toggle('active', show);
-                                    }
-                                };
-                                console.log('Santrilogy: Fallback toggleSidebar ditambahkan');
-                            }
-
-                            if (typeof window.usePrompt !== 'function') {
-                                window.usePrompt = function(promptText) {
-                                    var inputField = document.getElementById('inputField');
-                                    if (inputField) {
-                                        inputField.value = promptText;
-                                        // Fokus dan mungkin kirim otomatis
-                                        inputField.focus();
-                                        // Coba panggil fungsi sendMessage jika tersedia
-                                        if (typeof window.sendMessage === 'function') {
-                                            setTimeout(function() {
-                                                window.sendMessage();
-                                            }, 100);
-                                        }
-                                    }
-                                };
-                                console.log('Santrilogy: Fallback usePrompt ditambahkan');
-                            }
+                                } else {
+                                    console.log('Santrilogy: Fungsi ' + funcName + ' ditemukan dan siap digunakan');
+                                }
+                            });
 
                             // Cek apakah inputField memiliki event listener
                             var inputField = document.getElementById('inputField');
@@ -2842,6 +2837,40 @@
                                 inputField.setAttribute('data-input-listener-added', 'true');
                                 console.log('Santrilogy: Input event listener ditambahkan');
                             }
+
+                            // Cek tombol-tombol UI dan pasangkan event listener jika belum ada
+                            var buttonsToCheck = [
+                                { id: 'sendBtn', action: 'sendMessage' },
+                                { id: 'menuToggle', action: 'toggleSidebar' },
+                                { id: 'newChatBtn', action: 'startNewChat' },
+                                { id: 'settingsBtn', action: function() {
+                                    if (typeof window.SantrilogyApp !== 'undefined' && typeof window.SantrilogyApp.openModal === 'function') {
+                                        window.SantrilogyApp.openModal('settingsModal');
+                                    }
+                                }}
+                            ];
+
+                            buttonsToCheck.forEach(function(btnInfo) {
+                                var element = document.getElementById(btnInfo.id);
+                                if (element && !element.getAttribute('data-listener-added')) {
+                                    if (typeof btnInfo.action === 'string') {
+                                        // Action adalah nama fungsi
+                                        element.addEventListener('click', function() {
+                                            if (typeof window[btnInfo.action] === 'function') {
+                                                window[btnInfo.action]();
+                                            } else {
+                                                console.error('Santrilogy: Fungsi ' + btnInfo.action + ' tidak ditemukan untuk tombol ' + btnInfo.id);
+                                            }
+                                        });
+                                    } else if (typeof btnInfo.action === 'function') {
+                                        // Action adalah fungsi langsung
+                                        element.addEventListener('click', btnInfo.action);
+                                    }
+
+                                    element.setAttribute('data-listener-added', 'true');
+                                    console.log('Santrilogy: Event listener ditambahkan ke ' + btnInfo.id);
+                                }
+                            });
 
                             console.log('Santrilogy: Pengecekan fungsi-fungsi penting selesai');
                         }, 1500); // Delay 1.5 detik untuk memberi waktu lebih
