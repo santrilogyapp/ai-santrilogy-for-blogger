@@ -2224,7 +2224,8 @@
         },
 
         getHistory: async function(userId) {
-            const url = `${CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.HISTORY}?userId=${encodeURIComponent(userId)}`;
+            const encodedUserId = encodeURIComponent ? encodeURIComponent(userId) : userId;
+            const url = CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.HISTORY + '?userId=' + encodedUserId;
             return SantrilogyAPI.request(url, 'GET');
         },
 
