@@ -1,6 +1,6 @@
-// ========== SANTRILOGY AI - REAL BACKEND AUTHENTICATION INTEGRATION ==========
+// ========== SANTRILOGY AI - SECURE WORKER PROXY AUTHENTICATION ==========
 
-// Konfigurasi untuk komunikasi dengan Cloudflare Worker
+// Konfigurasi untuk komunikasi dengan Cloudflare Worker (Firebase Proxy)
 var CLOUDFLARE_WORKER_CONFIG = {
     BASE_URL: "https://worker-santrilogy-ai.santrilogyapp.workers.dev", // URL PRODUKSI
     ENDPOINTS: {
@@ -105,13 +105,17 @@ function updateAuthButtonState(isLoading, originalText = null) {
     }
 }
 
-// Update email auth function to use real backend
+// Update email auth function - use worker as the ONLY authentication method (secure proxy approach)
 window.firebaseEmailAuth = async function(email, password, authMode) {
     const originalButtonText = document.getElementById('authSubmitBtn')?.textContent || '';
 
     try {
         // Tampilkan loading state
         updateAuthButtonState(true, originalButtonText);
+
+        // ONLY use worker to handle authentication (secure proxy approach)
+        // This prevents direct Firebase SDK usage and API key exposure
+        console.log('Using worker as secure Firebase proxy for authentication request');
 
         // Panggil API auth backend
         const response = await SantrilogyAPI.request(
@@ -196,15 +200,19 @@ window.firebaseEmailAuth = async function(email, password, authMode) {
     }
 };
 
-// Google auth - redirect to worker for OAuth flow
+// Google auth - worker only (secure proxy approach)
 window.firebaseGoogleAuth = async function() {
     try {
+        // ONLY use worker for Google OAuth (secure proxy approach)
+        // This prevents direct Firebase SDK usage and API key exposure
+        console.log('Using worker as secure Firebase proxy for Google authentication request');
+
         // Redirect to worker for Google OAuth flow, include origin for redirect
         const origin = window.location.origin || window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '');
         const googleAuthUrl = `${CLOUDFLARE_WORKER_CONFIG.BASE_URL}${CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.AUTH}/google?origin=${encodeURIComponent(origin)}`;
         window.location.href = googleAuthUrl;
     } catch (e) {
-        console.error('Google auth redirect error:', e);
+        console.error('Google auth error:', e);
         if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
             window.SantrilogyApp.showToast(e.message, "error");
         }
@@ -256,15 +264,15 @@ function checkForTokenInUrl() {
 }
 
 
-// Logout function - clear tokens and update UI
+// Logout function - only clear local storage (worker handles server-side cleanup if needed)
 window.firebaseLogout = async function() {
     try {
-        // Hapus data auth dari localStorage
+        // Clear auth data from localStorage
         localStorage.removeItem('santrilogy_id_token');
         localStorage.removeItem('santrilogy_refresh_token');
         localStorage.removeItem('santrilogy_user');
 
-        // Update UI untuk logout
+        // Update UI for logout
         if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
             window.SantrilogyApp.updateUserUI(null); // null means logged out
             if (typeof window.SantrilogyApp.showToast === 'function') {
@@ -594,6 +602,44 @@ function ensureAuthFunctionsAreReady() {
     runAuthInitialization();
 }
 
+// Set a timeout to provide fallback functions if backend doesn't respond in time
+setTimeout(function() {
+    // If main functions are still not available after 2 seconds, provide basic fallbacks
+    if (typeof window.firebaseEmailAuth !== 'function') {
+        window.firebaseEmailAuth = async function(email, password, authMode) {
+            console.warn('Worker auth unavailable, using secure fallback');
+            if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+                window.SantrilogyApp.showToast('Sistem sedang dimuat ulang...', 'error');
+            }
+            // Wait for firebase-safe.js to load if needed
+            setTimeout(() => {
+                if (typeof window.firebaseEmailAuth === 'function' &&
+                    window.firebaseEmailAuth.toString().includes('safe fallback')) {
+                    window.firebaseEmailAuth(email, password, authMode);
+                }
+            }, 100);
+        };
+    }
+
+    if (typeof window.firebaseGoogleAuth !== 'function') {
+        window.firebaseGoogleAuth = async function() {
+            console.warn('Worker Google auth unavailable, using secure fallback');
+            if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+                window.SantrilogyApp.showToast('Sistem sedang dimuat ulang...', 'error');
+            }
+        };
+    }
+
+    if (typeof window.firebaseLogout !== 'function') {
+        window.firebaseLogout = async function() {
+            console.warn('Worker logout unavailable, using secure fallback');
+            if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+                window.SantrilogyApp.showToast('Sistem sedang dimuat ulang...', 'error');
+            }
+        };
+    }
+}, 2000); // 2 seconds timeout
+
 function runAuthInitialization() {
     // Jalankan cek auth saat halaman dimuat
     setTimeout(checkForTokenInUrl, 100); // Small delay to ensure SantrilogyApp is available
@@ -704,3 +750,23 @@ window.authSystemStatus = {
 
 // Jalankan inisialisasi status koneksi
 window.authSystemStatus.initialize();
+
+// Additional initialization for better reliability
+document.addEventListener('DOMContentLoaded', function() {
+    // Double-check that auth functions are available after all scripts load
+    setTimeout(function() {
+        if (typeof window.firebaseEmailAuth === 'function' &&
+            typeof window.firebaseGoogleAuth === 'function' &&
+            typeof window.firebaseLogout === 'function') {
+            window.authSystemStatus.ready = true;
+        }
+    }, 500); // Small delay to ensure all scripts are processed
+});
+
+// Ensure fallback auth functions are available if main functions fail to load properly
+setTimeout(function() {
+    if (typeof window.firebaseEmailAuth !== 'function') {
+        // Load fallback from firebase-safe.js
+        console.warn('Main auth functions not loaded, ensuring fallbacks are available');
+    }
+}, 1000);

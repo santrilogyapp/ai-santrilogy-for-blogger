@@ -817,7 +817,8 @@
                     document.head.appendChild(workerIntegrationScript);
 
                     workerIntegrationScript.onload = function() {
-                        // Load Firebase (but this will be used as fallback)
+                        // Load Firebase safe as the main authentication system (worker acts as Firebase proxy)
+                        // No direct Firebase SDK to avoid exposing API keys on client-side
                         const firebaseScript = document.createElement('script');
                         firebaseScript.src = 'js/firebase-safe.js';
                         document.head.appendChild(firebaseScript);

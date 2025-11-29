@@ -1745,7 +1745,22 @@ function fetchAIResponse(text, imageBase64, mimeType) {
             if (typeof window.firebaseEmailAuth === 'function') {
                 window.firebaseEmailAuth(email, password, state.authMode);
             } else {
-                showToast('Sistem autentikasi belum siap', 'error');
+                // Retry mechanism for authentication functions that might not be ready yet
+                var retryCount = 0;
+                var maxRetries = 20; // Try for up to 2 seconds (20 * 100ms)
+
+                function retryAuth() {
+                    retryCount++;
+                    if (typeof window.firebaseEmailAuth === 'function') {
+                        window.firebaseEmailAuth(email, password, state.authMode);
+                    } else if (retryCount < maxRetries) {
+                        setTimeout(retryAuth, 100);
+                    } else {
+                        showToast('Sistem autentikasi belum siap', 'error');
+                    }
+                }
+
+                retryAuth();
             }
         }
 
@@ -1753,7 +1768,22 @@ function fetchAIResponse(text, imageBase64, mimeType) {
             if (typeof window.firebaseGoogleAuth === 'function') {
                 window.firebaseGoogleAuth();
             } else {
-                showToast('Sistem autentikasi belum siap', 'error');
+                // Retry mechanism for authentication functions that might not be ready yet
+                var retryCount = 0;
+                var maxRetries = 20; // Try for up to 2 seconds (20 * 100ms)
+
+                function retryAuth() {
+                    retryCount++;
+                    if (typeof window.firebaseGoogleAuth === 'function') {
+                        window.firebaseGoogleAuth();
+                    } else if (retryCount < maxRetries) {
+                        setTimeout(retryAuth, 100);
+                    } else {
+                        showToast('Sistem autentikasi belum siap', 'error');
+                    }
+                }
+
+                retryAuth();
             }
         }
 
@@ -1761,7 +1791,22 @@ function fetchAIResponse(text, imageBase64, mimeType) {
             if (typeof window.firebaseLogout === 'function') {
                 window.firebaseLogout();
             } else {
-                showToast('Sistem autentikasi belum siap', 'error');
+                // Retry mechanism for authentication functions that might not be ready yet
+                var retryCount = 0;
+                var maxRetries = 20; // Try for up to 2 seconds (20 * 100ms)
+
+                function retryAuth() {
+                    retryCount++;
+                    if (typeof window.firebaseLogout === 'function') {
+                        window.firebaseLogout();
+                    } else if (retryCount < maxRetries) {
+                        setTimeout(retryAuth, 100);
+                    } else {
+                        showToast('Sistem autentikasi belum siap', 'error');
+                    }
+                }
+
+                retryAuth();
             }
         }
 
