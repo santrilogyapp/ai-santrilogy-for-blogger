@@ -254,11 +254,6 @@ function checkForTokenInUrl() {
     }
 }
 
-// Add URL token check to the initialization when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(checkForTokenInUrl, 100); // Small delay to ensure SantrilogyApp is available
-    setTimeout(checkAuthStatus, 500); // Delay biar UI sudah siap
-});
 
 // Logout function - clear tokens and update UI
 window.firebaseLogout = async function() {
@@ -354,10 +349,6 @@ function handleTokenExpired() {
     }
 }
 
-// Jalankan cek auth saat halaman dimuat
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(checkAuthStatus, 500); // Delay biar UI sudah siap
-});
 
 // API Wrapper Functions - Pengganti fungsi Firebase
 var SantrilogyBackend = {
@@ -567,3 +558,79 @@ window.firebaseLoadHistory = FirebaseReplacement.loadHistory;
 window.firebaseSaveSession = FirebaseReplacement.saveSession;
 window.firebaseLoadSession = FirebaseReplacement.loadSession;
 window.firebaseDeleteSession = FirebaseReplacement.deleteSession;
+
+// Pastikan semua fungsi autentikasi siap sebelum main.js menggunakannya
+function ensureAuthFunctionsAreReady() {
+    // Daftar fungsi autentikasi yang harus tersedia
+    const requiredAuthFunctions = [
+        'firebaseLoadHistory',
+        'firebaseSaveSession',
+        'firebaseLoadSession',
+        'firebaseDeleteSession',
+        'firebaseEmailAuth',
+        'firebaseGoogleAuth',
+        'firebaseLogout'
+    ];
+
+    // Cek apakah semua fungsi sudah tersedia
+    let allFunctionsReady = true;
+    for (const funcName of requiredAuthFunctions) {
+        if (typeof window[funcName] !== 'function') {
+            console.warn(`Auth function ${funcName} not ready yet`);
+            allFunctionsReady = false;
+        } else {
+            //console.log(`Auth function ${funcName} is ready`);
+        }
+    }
+
+    // Jika tidak semua fungsi siap, coba lagi setelah delay kecil
+    if (!allFunctionsReady) {
+        setTimeout(ensureAuthFunctionsAreReady, 50);
+        return;
+    }
+
+    // Semua fungsi siap, sekarang jalankan inisialisasi
+    runAuthInitialization();
+}
+
+function runAuthInitialization() {
+    // Jalankan cek auth saat halaman dimuat
+    setTimeout(checkForTokenInUrl, 100); // Small delay to ensure SantrilogyApp is available
+    setTimeout(checkAuthStatus, 500); // Delay biar UI sudah siap
+
+    // Tandai bahwa sistem autentikasi siap
+    window.firebaseReady = true;
+    console.log('Santrilogy AI: Authentication system ready');
+
+    // Tambahkan flag untuk mengetahui status autentikasi
+    window.authSystemStatus = {
+        ready: true,
+        timestamp: Date.now(),
+        functions: {
+            loadHistory: typeof window.firebaseLoadHistory === 'function',
+            saveSession: typeof window.firebaseSaveSession === 'function',
+            loadSession: typeof window.firebaseLoadSession === 'function',
+            deleteSession: typeof window.firebaseDeleteSession === 'function',
+            emailAuth: typeof window.firebaseEmailAuth === 'function',
+            googleAuth: typeof window.firebaseGoogleAuth === 'function',
+            logout: typeof window.firebaseLogout === 'function'
+        }
+    };
+}
+
+// Jalankan pengecekan saat DOM selesai dimuat
+document.addEventListener('DOMContentLoaded', function() {
+    //console.log('DOM loaded, checking auth functions...');
+    ensureAuthFunctionsAreReady();
+});
+
+// Juga coba eksekusi segera jika DOM sudah siap
+if (document.readyState === 'complete') {
+    //console.log('DOM already complete, checking auth functions...');
+    setTimeout(ensureAuthFunctionsAreReady, 1);
+}
+
+// Tambahkan fallback untuk kompatibilitas
+if (typeof window.checkAuthStatus === 'function' && typeof window.checkForTokenInUrl === 'function') {
+    setTimeout(ensureAuthFunctionsAreReady, 10);
+}
