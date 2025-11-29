@@ -2226,19 +2226,161 @@
                     });
                 },
 
+                // Gunakan localStorage untuk menyimpan dan mengambil riwayat
                 getHistory: async function(userId) {
-                    var encodedUserId = (typeof encodeURIComponent == 'function') ? encodeURIComponent(userId) : userId;
-                    var url = CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.HISTORY + '?userId=' + encodedUserId;
-                    return SantrilogyAPI.request(url, 'GET');
+                    try {
+                        const historyKey = 'santrilogy_history_' + userId;
+                        let history = [];
+                        try {
+                            history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+                        } catch(e) {
+                            history = [];
+                        }
+
+                        // Format untuk kompatibilitas dengan sistem yang ada
+                        const result = { history: history };
+                        return result;
+                    } catch (error) {
+                        console.error('Local history error:', error);
+                        return { history: [] };
+                    }
                 },
 
+                // Gunakan localStorage untuk operasi sesi
                 sessionOp: async function(sessionId, userId, action, sessionData = null) {
-                    return SantrilogyAPI.request(CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.SESSION, 'POST', {
-                        sessionId: sessionId,
-                        userId: userId,
-                        action: action,
-                        sessionData: sessionData
-                    });
+                    try {
+                        if (action === 'save' && sessionData) {
+                            // Simpan sesi ke localStorage
+                            const cacheKey = 'santrilogy_cache_' + userId;
+                            let cache = {};
+                            try {
+                                cache = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+                            } catch(e) {
+                                cache = {};
+                            }
+
+                            cache[sessionId] = {
+                                title: sessionData.title,
+                                messages: sessionData.messages,
+                                timestamp: Date.now()
+                            };
+
+                            // Batasi hanya 5 sesi terbaru
+                            const keys = Object.keys(cache).sort((a, b) => cache[b].timestamp - cache[a].timestamp);
+                            if (keys.length > 5) {
+                                const keepKeys = keys.slice(0, 5);
+                                const newCache = {};
+                                keepKeys.forEach(key => {
+                                    newCache[key] = cache[key];
+                                });
+                                cache = newCache;
+                            }
+
+                            localStorage.setItem(cacheKey, JSON.stringify(cache));
+
+                            // Juga simpan ke history
+                            const historyKey = 'santrilogy_history_' + userId;
+                            let history = [];
+                            try {
+                                history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+                            } catch(e) {
+                                history = [];
+                            }
+
+                            // Cek apakah sesi sudah ada
+                            const existingIndex = history.findIndex(item => item.id === sessionId);
+                            if (existingIndex === -1) {
+                                history.unshift({
+                                    id: sessionId,
+                                    title: sessionData.title.substring(0, 35) + (sessionData.title.length > 35 ? '...' : ''),
+                                    timestamp: Date.now(),
+                                    messageCount: sessionData.messages ? sessionData.messages.length : 0
+                                });
+
+                                // Batasi history
+                                if (history.length > 50) {
+                                    history = history.slice(0, 50);
+                                }
+                            } else {
+                                history[existingIndex].messageCount = sessionData.messages ? sessionData.messages.length : 0;
+                                history[existingIndex].timestamp = Date.now();
+                            }
+
+                            localStorage.setItem(historyKey, JSON.stringify(history));
+
+                            return { success: true };
+                        }
+                        else if (action === 'get') {
+                            // Ambil sesi dari localStorage
+                            const cacheKey = 'santrilogy_cache_' + userId;
+                            let cache = {};
+                            try {
+                                cache = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+                            } catch(e) {
+                                cache = {};
+                            }
+
+                            const session = cache[sessionId];
+                            return { data: session || null };
+                        }
+                        else if (action === 'delete') {
+                            // Hapus sesi dari localStorage
+                            const cacheKey = 'santrilogy_cache_' + userId;
+                            let cache = {};
+                            try {
+                                cache = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+                            } catch(e) {
+                                cache = {};
+                            }
+
+                            if (cache[sessionId]) {
+                                delete cache[sessionId];
+                                localStorage.setItem(cacheKey, JSON.stringify(cache));
+
+                                // Hapus juga dari history
+                                const historyKey = 'santrilogy_history_' + userId;
+                                let history = [];
+                                try {
+                                    history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+                                } catch(e) {
+                                    history = [];
+                                }
+
+                                history = history.filter(item => item.id !== sessionId);
+                                localStorage.setItem(historyKey, JSON.stringify(history));
+
+                                return { success: true };
+                            }
+
+                            return { success: false };
+                        }
+
+                        return { success: false };
+                    } catch (error) {
+                        console.error('Session operation error:', error);
+                        return { success: false };
+                    }
+                }
+            };
+
+            // Placeholder untuk auth - gunakan localStorage
+            SantrilogyBackend.authOp = async function(action, email = null, password = null, idToken = null) {
+                try {
+                    if (action === 'login' || action === 'register') {
+                        // Simulasi login sukses - kembalikan user ID sederhana
+                        const user = {
+                            uid: 'local_user_' + Date.now(),
+                            email: email,
+                            displayName: email ? email.split('@')[0] : 'Guest'
+                        };
+                        return { success: true, user: user };
+                    } else if (action === 'logout') {
+                        return { success: true };
+                    }
+                    return { success: false };
+                } catch (error) {
+                    console.error('Auth operation error:', error);
+                    return { success: false };
                 }
             };
 
