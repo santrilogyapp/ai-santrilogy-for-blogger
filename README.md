@@ -29,6 +29,7 @@ js/
 4. **Kode** - Syntax highlighting untuk berbagai bahasa pemrograman
 5. **History** - Menyimpan riwayat percakapan
 6. **Otentikasi** - Login dengan email atau Google
+7. **Open Graph** - Dukungan untuk sharing media sosial dengan gambar og:image yang telah ditentukan
 
 ## Format Teks Arab
 

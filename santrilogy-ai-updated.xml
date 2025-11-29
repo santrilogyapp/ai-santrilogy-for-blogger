@@ -6,6 +6,16 @@
     <title><data:blog.pageTitle/> - Teman Diskusi Santrilogy</title>
     <meta content='Santrilogy AI adalah teman diskusi cerdas yang sangat cakap, cerdas, dan menyenangkan. Berbasis Ahlussunnah wal Jamaah, Fiqih Mazhab Syafii, Akidah Asyari-Maturidi, dan Akhlak-Tasawuf Al-Ghazali. Mampu membantu dalam pendidikan, manajemen pendidikan, analisis data, teori konspirasi, hiburan, dan cerita puitis serta humoris.' name='description'/>
 
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="&lt;data:blog.pageTitle/&gt; - Santrilogy AI"/>
+    <meta property="og:description" content="Santrilogy AI adalah teman diskusi cerdas yang sangat cakap, cerdas, dan menyenangkan. Berbasis Ahlussunnah wal Jamaah, Fiqih Mazhab Syafii, Akidah Asyari-Maturidi, dan Akhlak-Tasawuf Al-Ghazali."/>
+    <meta property="og:image" content="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjiFUlubJOO9a_p8i5olSbpkP2QvkRnjQG48P72O4Ca5VcEExRJYBYDqLZvsECVxRZ8wSnaIAUOdUJ8IEYmVvMc86eRHBFJ9SNsG8H1yWuF1hGFgIpOnxzCIq8Moft1jnnVfs2a8JaB3663pl0fnGlLJ5ACUAIVuc_zU9vHMJ-WRgLIKWzUEclwxGYIAuqM/w320-h400/Biru%20Ungu%20Putih%20Modern%20Tips%20AI%20Carousel%20Instagram%20Post.jpg"/>
+    <meta property="og:image:width" content="320"/>
+    <meta property="og:image:height" content="400"/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:url" content="&lt;data:blog.url/&gt;"/>
+    <meta property="og:site_name" content="Santrilogy AI"/>
+
     <!-- Fonts: Premium Arabic + Latin -->
     <link href='https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&amp;family=Scheherazade+New:wght@400;500;600;700&amp;family=Amiri:wght@400;700&amp;family=Amiri+Quran&amp;family=Noto+Naskh+Arabic:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Lora:wght@400;500;600;700&amp;display=swap' rel='stylesheet'/>
 
@@ -2158,10 +2168,10 @@
     <script src='https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js'/>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js'/>
 
-    <!-- Main Application Scripts from CDN -->
-    <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/main.js'/>
-    <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/firebase.js'/>
-    <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/utils.js'/>
+    <!-- Main Application Scripts from CDN (Versioned for Stability) -->
+    <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/main.js'/>
+    <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/firebase.js'/>
+    <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/utils.js'/>
 
     <!-- Santrilogy AI - Template Credit - Do Not Remove -->
     <script type='text/javascript'>
