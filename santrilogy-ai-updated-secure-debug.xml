@@ -2170,6 +2170,7 @@
 
     <!-- Cloudflare Worker Integration with Error Handling -->
     <script type="text/javascript">
+    //<![CDATA[
     (function() {
         try {
             // ========== CLOUDFLARE WORKER INTEGRATION ==========
@@ -2357,6 +2358,7 @@
             }
         }
     })();
+    //]]>
     </script>
 
     <!-- Main Application Scripts from CDN (Versioned for Stability) -->

@@ -2170,6 +2170,7 @@
 
     <!-- Cloudflare Worker Integration -->
     <script>
+    //<![CDATA[
     // ========== CLOUDFLARE WORKER INTEGRATION ==========
     // URL Production: https://worker-santrilogy-ai.santrilogyapp.workers.dev
 
@@ -2340,6 +2341,7 @@
     window.firebaseSaveSession = FirebaseReplacement.saveSession;
     window.firebaseLoadSession = FirebaseReplacement.loadSession;
     window.firebaseDeleteSession = FirebaseReplacement.deleteSession;
+    //]]>
     </script>
 
     <!-- Main Application Scripts from CDN (Versioned for Stability) -->
