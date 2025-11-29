@@ -2265,7 +2265,7 @@
                     var messageCount = 0;
                     if (item) {
                         if (item.messages) {
-                            if (typeof item.messages.length !== 'undefined') {
+                            if (typeof item.messages.length != 'undefined') {
                                 messageCount = item.messages.length;
                             }
                         }

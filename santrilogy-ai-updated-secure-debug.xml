@@ -2226,7 +2226,7 @@
                 },
 
                 getHistory: async function(userId) {
-                    var encodedUserId = typeof encodeURIComponent !== 'undefined' ? encodeURIComponent(userId) : userId;
+                    var encodedUserId = (typeof encodeURIComponent == 'function') ? encodeURIComponent(userId) : userId;
                     var url = CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.HISTORY + '?userId=' + encodedUserId;
                     return SantrilogyAPI.request(url, 'GET');
                 },
@@ -2259,7 +2259,7 @@
                             var messageCount = 0;
                             if (item) {
                                 if (item.messages) {
-                                    if (typeof item.messages.length !== 'undefined') {
+                                    if (item.messages.length != null && typeof item.messages.length != 'undefined') {
                                         messageCount = item.messages.length;
                                     }
                                 }
@@ -2322,10 +2322,10 @@
 
             FirebaseReplacement.getCurrentUserId = function() {
                 try {
-                    var userId = typeof localStorage !== 'undefined' ? localStorage.getItem('santrilogy_user_id') : null;
+                    var userId = (typeof localStorage == 'object' && localStorage != null) ? localStorage.getItem('santrilogy_user_id') : null;
                     if (!userId) {
                         userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                        if (typeof localStorage !== 'undefined') {
+                        if (typeof localStorage == 'object' && localStorage != null) {
                             localStorage.setItem('santrilogy_user_id', userId);
                         }
                     }
