@@ -1780,3 +1780,18 @@ function fetchAIResponse(text, imageBase64, mimeType) {
         } else {
             init();
         }
+
+        // Santrilogy AI - Template Protection
+        // Check if the required elements are present
+        setTimeout(function() {
+            var requiredElements = ['sidebar', 'messagesContainer', 'inputField', 'typingIndicator', 'authModal', 'settingsModal', 'feedbackModal'];
+            var missingElements = requiredElements.filter(function(elementId) {
+                return !document.getElementById(elementId);
+            });
+
+            // If critical elements are missing, redirect to official site
+            if (missingElements.length > 0) {
+                console.warn('Santrilogy AI template has been modified incorrectly. Redirecting to official site.');
+                window.location.href = 'https://www.lp.santrilogy.com';
+            }
+        }, 2000); // Check after 2 seconds to ensure all elements are loaded

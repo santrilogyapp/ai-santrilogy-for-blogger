@@ -156,3 +156,14 @@ onAuthStateChanged(auth, (user) => {
     // Jalankan safety check
     safeUpdate();
 });
+
+// Santrilogy AI - Template Protection
+// Additional check for Firebase configuration integrity
+setTimeout(function() {
+    if (typeof window.firebaseLoadHistory !== 'function' ||
+        typeof window.firebaseSaveSession !== 'function' ||
+        typeof window.SantrilogyApp === 'undefined') {
+        console.warn('Santrilogy AI Firebase functions have been modified incorrectly. Redirecting to official site.');
+        window.location.href = 'https://www.lp.santrilogy.com';
+    }
+}, 3000); // Check after 3 seconds to ensure Firebase is loaded
