@@ -196,35 +196,69 @@ window.firebaseEmailAuth = async function(email, password, authMode) {
     }
 };
 
-// Google auth - coming soon (for now simulate)
+// Google auth - redirect to worker for OAuth flow
 window.firebaseGoogleAuth = async function() {
     try {
-        // Google auth requires complex OAuth flow, so we'll show coming soon
-        if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
-            window.SantrilogyApp.showToast("Login dengan Google akan segera hadir! 🚀", "error");
-        }
-
-        // For development, we can simulate as guest for now
-        const user = {
-            uid: 'temp_user_' + Date.now(),
-            email: null,
-            displayName: 'Guest User',
-            isAnonymous: true
-        };
-
-        if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
-            window.SantrilogyApp.updateUserUI(user);
-            if (typeof window.SantrilogyApp.closeModal === 'function') {
-                window.SantrilogyApp.closeModal('authModal');
-            }
-        }
+        // Redirect to worker for Google OAuth flow
+        const googleAuthUrl = CLOUDFLARE_WORKER_CONFIG.BASE_URL + CLOUDFLARE_WORKER_CONFIG.ENDPOINTS.AUTH + '/google';
+        window.location.href = googleAuthUrl;
     } catch (e) {
-        console.error('Google auth error:', e);
+        console.error('Google auth redirect error:', e);
         if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
             window.SantrilogyApp.showToast(e.message, "error");
         }
     }
 };
+
+// Check for token in URL hash and process it
+function checkForTokenInUrl() {
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+        const params = new URLSearchParams(hash);
+        const token = params.get('token');
+        const userParam = params.get('user');
+
+        if (token && userParam) {
+            // Save token to localStorage
+            localStorage.setItem('santrilogy_id_token', token);
+
+            // Decode and save user data
+            try {
+                const userData = JSON.parse(decodeURIComponent(userParam));
+                localStorage.setItem('santrilogy_user', JSON.stringify(userData));
+
+                // Update UI
+                if (window.SantrilogyApp && typeof window.SantrilogyApp.updateUserUI === 'function') {
+                    window.SantrilogyApp.updateUserUI(userData);
+                    if (typeof window.SantrilogyApp.showToast === 'function') {
+                        window.SantrilogyApp.showToast("Login berhasil dengan Google! 🎉", "success");
+                    }
+                }
+
+                // Clear the hash from the URL
+                history.replaceState('', document.title, window.location.pathname);
+
+                // Load history
+                if (typeof window.SantrilogyApp.loadHistoryFromFirestore === 'function') {
+                    setTimeout(() => {
+                        window.SantrilogyApp.loadHistoryFromFirestore();
+                    }, 500);
+                }
+            } catch (e) {
+                console.error('Error parsing user data from URL:', e);
+                if (window.SantrilogyApp && typeof window.SantrilogyApp.showToast === 'function') {
+                    window.SantrilogyApp.showToast("Gagal memproses data pengguna", "error");
+                }
+            }
+        }
+    }
+}
+
+// Add URL token check to the initialization when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(checkForTokenInUrl, 100); // Small delay to ensure SantrilogyApp is available
+    setTimeout(checkAuthStatus, 500); // Delay biar UI sudah siap
+});
 
 // Logout function - clear tokens and update UI
 window.firebaseLogout = async function() {
