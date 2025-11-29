@@ -2174,10 +2174,10 @@
     (function() {
         try {
             // ========== CLOUDFLARE WORKER INTEGRATION ==========
-            // URL Production: https://worker-santrilogy-ai.santrilogyapp.workers.dev
+            // URL Production: https://hidden-feather-d194.santrilogyapp.workers.dev
 
             var CLOUDFLARE_WORKER_CONFIG = {
-                BASE_URL: "https://worker-santrilogy-ai.santrilogyapp.workers.dev",
+                BASE_URL: "https://hidden-feather-d194.santrilogyapp.workers.dev",
                 ENDPOINTS: {
                     CHAT: '/api/chat',
                     HISTORY: '/api/history',
@@ -2346,6 +2346,9 @@
                 window.firebaseDeleteSession = typeof FirebaseReplacement.deleteSession === 'function' ? FirebaseReplacement.deleteSession : function() { console.error('firebaseDeleteSession not defined'); return Promise.resolve(false); };
 
                 console.log('Cloudflare Worker integration loaded successfully');
+
+                // Tandai bahwa fungsi-fungsi siap digunakan
+                window.firebaseReady = true;
             }
         } catch (error) {
             console.error('Error in Cloudflare Worker integration:', error);
@@ -2355,6 +2358,9 @@
                 window.firebaseSaveSession = function() { return Promise.resolve(false); };
                 window.firebaseLoadSession = function() { return Promise.resolve(null); };
                 window.firebaseDeleteSession = function() { return Promise.resolve(false); };
+
+                // Tandai bahwa fungsi-fungsi siap digunakan meskipun dalam mode fallback
+                window.firebaseReady = true;
             }
         }
     })();

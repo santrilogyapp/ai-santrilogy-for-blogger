@@ -2172,10 +2172,10 @@
     <script>
     //<![CDATA[
     // ========== CLOUDFLARE WORKER INTEGRATION ==========
-    // URL Production: https://worker-santrilogy-ai.santrilogyapp.workers.dev
+    // URL Production: https://hidden-feather-d194.santrilogyapp.workers.dev
 
     var CLOUDFLARE_WORKER_CONFIG = {
-        BASE_URL: "https://worker-santrilogy-ai.santrilogyapp.workers.dev",
+        BASE_URL: "https://hidden-feather-d194.santrilogyapp.workers.dev",
         ENDPOINTS: {
             CHAT: '/api/chat',
             HISTORY: '/api/history',
@@ -2341,6 +2341,9 @@
     window.firebaseSaveSession = FirebaseReplacement.saveSession;
     window.firebaseLoadSession = FirebaseReplacement.loadSession;
     window.firebaseDeleteSession = FirebaseReplacement.deleteSession;
+
+    // Pastikan fungsi-fungsi ini tersedia sebelum main.js mencoba menggunakannya
+    window.firebaseReady = true;
     //]]>
     </script>
 
