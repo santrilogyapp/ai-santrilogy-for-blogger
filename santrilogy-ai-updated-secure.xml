@@ -2192,8 +2192,12 @@
                     headers: { 'Content-Type': 'application/json' }
                 };
 
-                if (data && (method === 'POST' || method === 'PUT')) {
-                    config.body = JSON.stringify(data);
+                if (data != null) {
+                    if (method === 'POST') {
+                        config.body = JSON.stringify(data);
+                    } else if (method === 'PUT') {
+                        config.body = JSON.stringify(data);
+                    }
                 }
 
                 const response = await fetch(CLOUDFLARE_WORKER_CONFIG.BASE_URL + endpoint, config);
@@ -2251,12 +2255,23 @@
                 if (!userId) return [];
 
                 const result = await SantrilogyBackend.getHistory(userId);
-                return (result.history || []).map((item, index) => ({
-                    id: item.id || `session_${index}`,
-                    title: item.title || 'Untitled Session',
-                    messageCount: item.messages?.length || 0,
-                    timestamp: item.timestamp || Date.now()
-                }));
+                const histories = result.history ? result.history : [];
+                return histories.map((item, index) => {
+                    const id = item.id ? item.id : `session_${index}`;
+                    const title = item.title ? item.title : 'Untitled Session';
+                    let messageCount = 0;
+                    if (item.messages) {
+                        messageCount = item.messages.length;
+                        if (!messageCount) messageCount = 0;
+                    }
+                    const timestamp = item.timestamp ? item.timestamp : Date.now();
+                    return {
+                        id: id,
+                        title: title,
+                        messageCount: messageCount,
+                        timestamp: timestamp
+                    };
+                });
             } catch (error) {
                 console.error('Load history error:', error);
                 return [];
@@ -2282,7 +2297,7 @@
                 const result = await SantrilogyBackend.sessionOp(
                     sessionId, userId, 'get'
                 );
-                return result.data || null;
+                return result.data ? result.data : null;
             } catch (error) {
                 console.error('Load session error:', error);
                 return null;
