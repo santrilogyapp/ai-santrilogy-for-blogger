@@ -4,9 +4,9 @@
   "description": "Santrilogy AI adalah template Blogger canggih yang menyediakan antarmuka chat AI untuk diskusi tentang Kitab Kuning, pendidikan Islam, teknologi, dan cerita inspiratif.",
   "main": "js/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "echo \"Build script coming soon\"",
-    "dev": "echo \"Development server coming soon\""
+    "start": "python3 -m http.server 8000",
+    "dev": "python3 -m http.server 8000",
+    "test": "echo \"Running syntax checks...\" && node -c js/main.js && node -c js/firebase-safe.js && node -c js/worker-integration.js && echo \"All JavaScript files have valid syntax!\""
   },
   "repository": {
     "type": "git",

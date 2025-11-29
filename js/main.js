@@ -80,12 +80,40 @@ var elements = {};
 
 // ========== INITIALIZE ==========
 function init() {
+    // Ensure DOM is ready and elements exist before initializing
+    if (!document.getElementById('sidebar') ||
+        !document.getElementById('messagesContainer') ||
+        !document.getElementById('inputField')) {
+        console.warn('Santrilogy AI: Required DOM elements not found, attempting delayed initialization...');
+        // Try again after a short delay to allow DOM to fully load
+        setTimeout(function() {
+            if (!document.getElementById('sidebar') ||
+                !document.getElementById('messagesContainer') ||
+                !document.getElementById('inputField')) {
+                console.error('Santrilogy AI: Required DOM elements still not found after delay. Application may not function properly.');
+                return;
+            } else {
+                // Elements are now available, proceed with initialization
+                cacheElements();
+                initializeLibraries();
+                loadPreferences();
+                setupEventListeners();
+                setupFeedbackTimer();
+                setupSmartHeader();
+                console.log('Santrilogy AI: Initialization completed after delay');
+            }
+        }, 500);
+        return;
+    }
+
+    // DOM elements are available, proceed with normal initialization
     cacheElements();
     initializeLibraries();
     loadPreferences();
     setupEventListeners();
     setupFeedbackTimer();
     setupSmartHeader();
+    console.log('Santrilogy AI: Initialization completed successfully');
 }
 
 function cacheElements() {

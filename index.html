@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Santrilogy AI - Frontend Application</title>
+    <style>
+        /* Basic styles to make the app visible */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9fafb;
+            min-height: 100vh;
+            color: #374151;
+        }
+
+        /* Loading indicator */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #0d9488;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .app-container {
+            display: none;
+        }
+
+        .app-container.ready {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Memuat Santrilogy AI...</div>
+    </div>
+
+    <!-- Main Application Container -->
+    <div id="appContainer" class="app-container">
+        <!-- Full application interface based on the actual Santrilogy AI structure -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <h2>Santrilogy AI</h2>
+                </div>
+                <div class="user-section">
+                    <div class="user-info" id="userCard">
+                        <div class="user-avatar" id="userAvatar">?</div>
+                        <div class="user-details">
+                            <div id="userName">Guest</div>
+                            <div id="userPlan">Klik untuk masuk</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <button class="new-chat-btn" id="newChatBtn">+ Diskusi Baru</button>
+
+                <div class="history-list" id="historyList">
+                    <div style="padding:20px;text-align:center;color:var(--text-tertiary);font-size:0.85rem">Login untuk menyimpan riwayat</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+        <div class="main-content">
+            <header class="main-header" id="mainHeader">
+                <div class="header-content">
+                    <button class="menu-btn" id="menuToggle">☰</button>
+                    <h1>Santrilogy AI</h1>
+                    <button class="settings-btn" id="settingsBtn">⚙️</button>
+                </div>
+            </header>
+
+            <div class="chat-area" id="chatArea">
+                <!-- Welcome Screen -->
+                <div class="welcome-screen" id="welcomeScreen" style="display: flex;">
+                    <div class="welcome-content">
+                        <h2>Selamat Datang di Santrilogy AI</h2>
+                        <p>Teman diskusi cerdas tentang Kitab Kuning, pendidikan Islam, dan teknologi</p>
+                        <div class="quick-prompts" id="quickPrompts">
+                            <button class="quick-prompt" data-prompt="Jelaskan tentang Basmallah">Jelaskan tentang Basmallah</button>
+                            <button class="quick-prompt" data-prompt="Apa itu Kitab Kuning?">Apa itu Kitab Kuning?</button>
+                            <button class="quick-prompt" data-prompt="Bagaimana cara belajar agama yang efektif?">Belajar agama efektif</button>
+                            <button class="quick-prompt" data-prompt="Saya ingin berdiskusi denganmu">Mulai Berdiskusi</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Container -->
+                <div class="messages-container" id="messagesContainer"></div>
+
+                <!-- Typing Indicator -->
+                <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <div class="image-preview" id="imagePreview" style="display: none;">
+                    <img id="previewImg" alt="Preview">
+                    <button class="remove-image-btn" id="removeImageBtn">×</button>
+                </div>
+
+                <div class="input-container">
+                    <textarea
+                        id="inputField"
+                        placeholder="Ketik pesan Anda di sini..."
+                        rows="1"
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn" title="Kirim" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    <button class="upload-btn" id="uploadBtn" title="Unggah gambar">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authentication Modal -->
+    <div class="modal" id="authModal">
+        <div class="modal-content">
+            <span class="modal-close" id="authModalClose">&times;</span>
+            <h3 id="authModalTitle">Selamat Datang</h3>
+            <div id="authContainer">
+                <button class="login-btn" id="loginBtn">Masuk</button>
+            </div>
+            <div id="authForm">
+                <input type="email" id="authEmail" placeholder="Email" autocomplete="email">
+                <input type="password" id="authPassword" placeholder="Password" autocomplete="current-password">
+                <button id="authSubmitBtn">Masuk</button>
+                <button id="googleAuthBtn">Masuk dengan Google</button>
+                <div>
+                    <span id="authSwitchText">Belum punya akun?</span>
+                    <a href="#" id="authSwitchLink">Daftar</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <span class="modal-close" id="settingsModalClose">&times;</span>
+            <h3>Pengaturan</h3>
+            <div class="settings-option">
+                <label>Tema:</label>
+                <div class="theme-options">
+                    <button id="themeLightBtn">Terang</button>
+                    <button id="themeDarkBtn">Gelap</button>
+                </div>
+            </div>
+            <div class="settings-option">
+                <label>Ukuran Font:</label>
+                <input type="range" id="fontSizeSlider" min="12" max="20" value="14">
+            </div>
+            <div class="settings-option">
+                <label>Warna Aksen:</label>
+                <div id="colorOptions" class="color-options">
+                    <div class="color-option" data-color="#0d9488" style="background-color: #0d9488;"></div>
+                    <div class="color-option" data-color="#3b82f6" style="background-color: #3b82f6;"></div>
+                    <div class="color-option" data-color="#ef4444" style="background-color: #ef4444;"></div>
+                    <div class="color-option" data-color="#f59e0b" style="background-color: #f59e0b;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <span class="modal-close" id="feedbackModalClose">&times;</span>
+            <h3>Bantu Kami Berkembang</h3>
+            <div class="star-rating" id="starRating">
+                <span class="star" data-rating="1">⭐</span>
+                <span class="star" data-rating="2">⭐</span>
+                <span class="star" data-rating="3">⭐</span>
+                <span class="star" data-rating="4">⭐</span>
+                <span class="star" data-rating="5">⭐</span>
+            </div>
+            <button id="shareBtn">Bagikan Santrilogy AI</button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <style>
+        :root {
+            --primary: #0d9488;
+            --primary-light: #10b981;
+            --primary-dark: #047857;
+            --background: #ffffff;
+            --surface: #f9fafb;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --border-light: #e5e7eb;
+            --border-medium: #d1d5db;
+            --border-dark: #9ca3af;
+            --font-size-base: 14px;
+        }
+
+        [data-theme="dark"] {
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+            --border-light: #334155;
+            --border-medium: #475569;
+            --border-dark: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: var(--font-size-base);
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.5;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Layout */
+        .sidebar, .main-content {
+            position: fixed;
+            height: 100vh;
+            top: 0;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.active {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            left: 0;
+            width: 100%;
+        }
+
+        @media (min-width: 900px) {
+            .sidebar {
+                transform: translateX(0);
+            }
+            .main-content {
+                left: 280px;
+                width: calc(100% - 280px);
+            }
+        }
+
+        .sidebar-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+            display: none;
+        }
+
+        .sidebar-backdrop.active {
+            display: block;
+        }
+
+        /* Header */
+        .main-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 50;
+            transition: transform 0.3s ease;
+        }
+
+        .main-header.hidden {
+            transform: translateY(-100%);
+        }
+
+        .chat-area.expanded {
+            padding-top: 0;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-right: 16px;
+            color: var(--text-primary);
+        }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-left: auto;
+            color: var(--text-primary);
+        }
+
+        /* Chat Area */
+        .chat-area {
+            position: relative;
+            height: 100%;
+            padding-top: 60px;
+            overflow-y: auto;
+        }
+
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: calc(100% - 140px);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .welcome-content h2 {
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+
+        .quick-prompts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            max-width: 600px;
+            margin-top: 24px;
+        }
+
+        .quick-prompt {
+            padding: 12px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s ease;
+        }
+
+        .quick-prompt:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Messages */
+        .messages-container {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            padding: 16px;
+        }
+
+        .messages-container.active {
+            display: flex;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 90%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 100%;
+        }
+
+        .message.user .message-bubble {
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-bubble {
+            background: var(--surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border-light);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Arabic text formatting */
+        .arabic-block {
+            font-size: 1.4em;
+            line-height: 2;
+            text-align: right;
+            direction: rtl;
+            font-weight: normal;
+            margin: 8px 0;
+        }
+
+        .arabic-quran {
+            font-size: 1.6em;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .arabic-inline {
+            direction: rtl;
+            unicode-bidi: embed;
+        }
+
+        .arabic-with-translation {
+            text-align: right;
+            direction: rtl;
+        }
+
+        .translation {
+            text-align: left;
+            direction: ltr;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            margin-top: 4px;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            margin: 8px 0;
+        }
+
+        .typing-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(1) { animation-delay: 0s; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+
+        /* Input area */
+        .input-area {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 16px;
+            background: var(--surface);
+            border-top: 1px solid var(--border-light);
+        }
+
+        .image-preview {
+            position: relative;
+            max-width: 200px;
+            margin-bottom: 8px;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+        }
+
+        .remove-image-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .input-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        #inputField {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-medium);
+            border-radius: 20px;
+            resize: none;
+            max-height: 140px;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        #inputField:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
+        }
+
+        .send-btn, .upload-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+        }
+
+        .send-btn:not(.active) {
+            background: var(--border-light);
+            cursor: not-allowed;
+        }
+
+        .send-btn.active {
+            background: var(--primary);
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--background);
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: var(--surface);
+            border-left: 4px solid var(--primary);
+            color: var(--text-primary);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            border-left-color: #10b981;
+        }
+
+        .toast.error {
+            border-left-color: #ef4444;
+        }
+
+        /* Code blocks */
+        .code-block {
+            margin: 12px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .copy-btn {
+            padding: 4px 8px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        /* Sidebar styles */
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .user-info:hover {
+            background: var(--background);
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-item:hover:not(.active) {
+            background: var(--background);
+        }
+
+        .code-block pre {
+            margin: 0;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            padding: 16px;
+            display: block;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+    </style>
+
+    <!-- Dependencies in the correct order with DOM ready checks -->
+    <script>
+        // Preload all dependencies and ensure DOM is ready before initializing
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show loading screen until all scripts are loaded
+            const loadingScreen = document.getElementById('loadingScreen');
+
+            // Load external libraries first
+            function loadScript(src, callback) {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = callback;
+                document.head.appendChild(script);
+            }
+
+            // Load all scripts in proper sequence
+            loadScript('https://cdn.jsdelivr.net/npm/marked/marked.min.js', function() {
+                loadScript('https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js', function() {
+                    loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js', function() {
+                        // Now load application scripts
+                        loadApplicationScripts();
+                    });
+                });
+            });
+
+            function loadApplicationScripts() {
+                // Load utility functions first
+                const utilsScript = document.createElement('script');
+                utilsScript.src = 'js/utils.js';
+                document.head.appendChild(utilsScript);
+
+                utilsScript.onload = function() {
+                    // Load worker integration (provides Firebase replacement functions)
+                    const workerIntegrationScript = document.createElement('script');
+                    workerIntegrationScript.src = 'js/worker-integration.js';
+                    document.head.appendChild(workerIntegrationScript);
+
+                    workerIntegrationScript.onload = function() {
+                        // Load Firebase (but this will be used as fallback)
+                        const firebaseScript = document.createElement('script');
+                        firebaseScript.src = 'js/firebase-safe.js';
+                        document.head.appendChild(firebaseScript);
+
+                        firebaseScript.onload = function() {
+                            // Finally load main app after a brief delay to ensure all dependencies are ready
+                            setTimeout(function() {
+                                const mainScript = document.createElement('script');
+                                mainScript.src = 'js/main.js';
+                                document.head.appendChild(mainScript);
+
+                                mainScript.onload = function() {
+                                    // Hide loading screen and show app
+                                    setTimeout(function() {
+                                        loadingScreen.style.opacity = '0';
+                                        setTimeout(function() {
+                                            loadingScreen.style.display = 'none';
+                                            document.getElementById('appContainer').classList.add('ready');
+                                        }, 300);
+                                    }, 1000);
+                                };
+                            }, 100);
+                        };
+                    };
+                };
+            }
+        });
+    </script>
+</body>
+</html>

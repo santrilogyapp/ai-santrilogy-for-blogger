@@ -72,6 +72,19 @@ Sebelum menggunakan template ini di Blogger:
 
 Silakan fork repository ini dan kirimkan pull request jika ingin berkontribusi pada pengembangan template ini.
 
+## Penggunaan Frontend Lokal
+
+Untuk menjalankan aplikasi frontend secara lokal:
+
+1. Pastikan Anda memiliki Node.js dan npm terinstall
+2. Jalankan perintah: `npm run dev`
+3. Buka browser dan akses: `http://localhost:8000`
+
+Atau gunakan server Python bawaan:
+```bash
+python3 -m http.server 8000
+```
+
 ## Lisensi
 
 [Spesifikasikan lisensi di sini jika ada]
