@@ -4109,31 +4109,36 @@ window.SantrilogyApp = {
         (function() {
             'use strict';
 
-            // Check if the required scripts are loaded
-            var scripts = ['SantrilogyApp', 'firebaseLoadHistory', 'marked', 'mermaid'];
-            var missing = scripts.filter(function(script) {
-                return typeof window[script] === 'undefined';
+            // Schedule the protection check to run after all external scripts have loaded
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    // Check if the required scripts are loaded
+                    var scripts = ['SantrilogyApp', 'firebaseLoadHistory', 'marked', 'mermaid'];
+                    var missing = scripts.filter(function(script) {
+                        return typeof window[script] === 'undefined';
+                    });
+
+                    // If critical scripts are missing or tampered with, redirect to official site
+                    if (missing.length > 0) {
+                        console.warn('Santrilogy AI template has been modified incorrectly. Redirecting to official site.');
+                        window.location.href = 'https://www.lp.santrilogy.com';
+                    }
+
+                    // Additional check for removed credit
+                    var templateContent = document.documentElement.outerHTML;
+                    if (!templateContent.includes('Santrilogy AI')) {
+                        console.warn('Santrilogy AI credit has been removed. Redirecting to official site.');
+                        window.location.href = 'https://www.lp.santrilogy.com';
+                    }
+
+                    // Add non-removable credit notice
+                    var creditNotice = document.createElement('div');
+                    creditNotice.id = 'santrilogy-credit-notice';
+                    creditNotice.style.cssText = 'position:fixed !important; bottom:0 !important; left:0 !important; width:100% !important; background:transparent !important; color:transparent !important; font-size:0 !important; line-height:0 !important; height:0 !important; overflow:hidden !important; z-index:-9999 !important; pointer-events:none !important;';
+                    creditNotice.innerHTML = 'Template by Santrilogy AI - www.lp.santrilogy.com';
+                    document.body.appendChild(creditNotice);
+                }, 5000); // Check after 5 seconds to ensure all scripts are loaded
             });
-
-            // If critical scripts are missing or tampered with, redirect to official site
-            if (missing.length > 0) {
-                console.warn('Santrilogy AI template has been modified incorrectly. Redirecting to official site.');
-                window.location.href = 'https://www.lp.santrilogy.com';
-            }
-
-            // Additional check for removed credit
-            var templateContent = document.documentElement.outerHTML;
-            if (!templateContent.includes('Santrilogy AI')) {
-                console.warn('Santrilogy AI credit has been removed. Redirecting to official site.');
-                window.location.href = 'https://www.lp.santrilogy.com';
-            }
-
-            // Add non-removable credit notice
-            var creditNotice = document.createElement('div');
-            creditNotice.id = 'santrilogy-credit-notice';
-            creditNotice.style.cssText = 'position:fixed !important; bottom:0 !important; left:0 !important; width:100% !important; background:transparent !important; color:transparent !important; font-size:0 !important; line-height:0 !important; height:0 !important; overflow:hidden !important; z-index:-9999 !important; pointer-events:none !important;';
-            creditNotice.innerHTML = 'Template by Santrilogy AI - www.lp.santrilogy.com';
-            document.body.appendChild(creditNotice);
         })();
         //]]>
     </script>

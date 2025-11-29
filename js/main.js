@@ -1787,7 +1787,7 @@ function fetchAIResponse(text, imageBase64, mimeType) {
         }
 
         // Santrilogy AI - Template Protection
-        // Check if the required elements are present
+        // Check if the required elements are present - delayed to avoid conflict with CDN loading
         setTimeout(function() {
             var requiredElements = ['sidebar', 'messagesContainer', 'inputField', 'typingIndicator', 'authModal', 'settingsModal', 'feedbackModal'];
             var missingElements = requiredElements.filter(function(elementId) {
@@ -1799,4 +1799,4 @@ function fetchAIResponse(text, imageBase64, mimeType) {
                 console.warn('Santrilogy AI template has been modified incorrectly. Redirecting to official site.');
                 window.location.href = 'https://www.lp.santrilogy.com';
             }
-        }, 2000); // Check after 2 seconds to ensure all elements are loaded
+        }, 7000); // Check after 7 seconds to ensure all CDN elements are loaded
