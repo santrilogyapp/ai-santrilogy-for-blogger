@@ -2483,7 +2483,6 @@
     <!-- Load in proper dependency order from CDN - Updated for better initialization -->
     <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/utils.js'/>
     <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/worker-integration.js'/>
-    <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/firebase-safe.js'/>
     <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/main.js'/>
 
     <!-- Santrilogy AI - Template Credit - Do Not Remove -->
