@@ -2249,18 +2249,22 @@
                         if (!userId) return [];
 
                         var result = await SantrilogyBackend.getHistory(userId);
-                        var histories = result && result.history ? result.history : [];
+                        var histories = result ? (result.history ? result.history : []) : [];
                         var mapped = [];
 
                         for (var i = 0; i < histories.length; i++) {
                             var item = histories[i];
-                            var id = item && item.id ? item.id : 'session_' + i;
-                            var title = item && item.title ? item.title : 'Untitled Session';
+                            var id = item ? (item.id ? item.id : 'session_' + i) : 'session_' + i;
+                            var title = item ? (item.title ? item.title : 'Untitled Session') : 'Untitled Session';
                             var messageCount = 0;
-                            if (item && item.messages && typeof item.messages.length !== 'undefined') {
-                                messageCount = item.messages.length;
+                            if (item) {
+                                if (item.messages) {
+                                    if (typeof item.messages.length !== 'undefined') {
+                                        messageCount = item.messages.length;
+                                    }
+                                }
                             }
-                            var timestamp = item && item.timestamp ? item.timestamp : Date.now();
+                            var timestamp = item ? (item.timestamp ? item.timestamp : Date.now()) : Date.now();
 
                             mapped.push({
                                 id: id,
@@ -2282,7 +2286,7 @@
                         var result = await SantrilogyBackend.sessionOp(
                             sessionId, userId, 'save', {title: title, messages: messages}
                         );
-                        return result && result.success === true;
+                        return result ? (result.success === true) : false;
                     } catch (error) {
                         console.error('Save session error:', error);
                         return false;
@@ -2295,7 +2299,7 @@
                         var result = await SantrilogyBackend.sessionOp(
                             sessionId, userId, 'get'
                         );
-                        return result && result.data ? result.data : null;
+                        return result ? (result.data ? result.data : null) : null;
                     } catch (error) {
                         console.error('Load session error:', error);
                         return null;
@@ -2308,7 +2312,7 @@
                         var result = await SantrilogyBackend.sessionOp(
                             sessionId, userId, 'delete'
                         );
-                        return result && result.success === true;
+                        return result ? (result.success === true) : false;
                     } catch (error) {
                         console.error('Delete session error:', error);
                         return false;

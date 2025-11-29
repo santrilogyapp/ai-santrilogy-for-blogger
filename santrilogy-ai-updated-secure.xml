@@ -2256,23 +2256,30 @@
                 if (!userId) return [];
 
                 const result = await SantrilogyBackend.getHistory(userId);
-                const histories = result.history ? result.history : [];
-                return histories.map((item, index) => {
-                    const id = item.id ? item.id : `session_${index}`;
-                    const title = item.title ? item.title : 'Untitled Session';
-                    let messageCount = 0;
-                    if (item.messages) {
-                        messageCount = item.messages.length;
-                        if (!messageCount) messageCount = 0;
+                var histories = result ? (result.history ? result.history : []) : [];
+                var mapped = [];
+                for (var i = 0; i < histories.length; i++) {
+                    var item = histories[i];
+                    var id = item ? (item.id ? item.id : 'session_' + i) : 'session_' + i;
+                    var title = item ? (item.title ? item.title : 'Untitled Session') : 'Untitled Session';
+                    var messageCount = 0;
+                    if (item) {
+                        if (item.messages) {
+                            if (typeof item.messages.length !== 'undefined') {
+                                messageCount = item.messages.length;
+                            }
+                        }
                     }
-                    const timestamp = item.timestamp ? item.timestamp : Date.now();
-                    return {
+                    var timestamp = item ? (item.timestamp ? item.timestamp : Date.now()) : Date.now();
+
+                    mapped.push({
                         id: id,
                         title: title,
                         messageCount: messageCount,
                         timestamp: timestamp
-                    };
-                });
+                    });
+                }
+                return mapped;
             } catch (error) {
                 console.error('Load history error:', error);
                 return [];
