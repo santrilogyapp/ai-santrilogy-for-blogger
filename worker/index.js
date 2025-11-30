@@ -1,155 +1,12 @@
 /**
- * SANTRILOGY AI - CLOUDFLARE AUTH + AI WORKER (v3.0) - SAFE VERSION
- * Platform: Cloudflare Workers + D1 Database
- *
- * ENV Variables yang dibutuhkan:
- * - JWT_SECRET: Secret untuk JWT signing
- * - GOOGLE_CLIENT_ID: Google OAuth Client ID
- * - GOOGLE_CLIENT_SECRET: Google OAuth Client Secret
- * - AI_WORKER_URL: URL untuk AI processing (opsional)
- * - ALLOWED_ORIGINS: Origins yang diizinkan (comma separated)
- * - DB: D1 Database binding
+ * SANTRILOGY AI - FINAL SMART VERSION
+ * Fitur: Auth, D1, Vectorize RAG, & Smart Topic Classification
  */
-
-// JWT Utils untuk Cloudflare Workers (inline)
-// Implementasi sederhana dari JWT signing/verification untuk Cloudflare Workers
-
-async function generateJWT(payload, secret) {
-  // Tambahkan exp jika tidak ada
-  if (!payload.exp) {
-    payload.exp = Math.floor(Date.now() / 1000) + (24 * 60 * 60); // 24 jam
-  }
-
-  // Header JWT
-  const header = {
-    alg: 'HS256',
-    typ: 'JWT'
-  };
-
-  // Encode header dan payload
-  const encodedHeader = urlEncodeBase64(JSON.stringify(header));
-  const encodedPayload = urlEncodeBase64(JSON.stringify(payload));
-
-  // Buat signature input
-  const signatureInput = `${encodedHeader}.${encodedPayload}`;
-
-  // Buat signature
-  const signature = await createHMACSignature(signatureInput, secret);
-
-  // Gabungkan semua bagian
-  return `${signatureInput}.${signature}`;
-}
-
-async function verifyJWT(token, secret) {
-  const [encodedHeader, encodedPayload, signature] = token.split('.');
-
-  if (!encodedHeader || !encodedPayload || !signature) {
-    throw new Error('Token tidak valid');
-  }
-
-  // Decode payload
-  const payload = JSON.parse(urlDecodeBase64(encodedPayload));
-
-  // Verifikasi waktu kadaluarsa
-  const now = Math.floor(Date.now() / 1000);
-  if (payload.exp && payload.exp < now) {
-    throw new Error('Token telah kadaluarsa');
-  }
-
-  // Buat ulang signature input
-  const signatureInput = `${encodedHeader}.${encodedPayload}`;
-  const expectedSignature = await createHMACSignature(signatureInput, secret);
-
-  // Bandingkan signature
-  if (expectedSignature !== signature) {
-    throw new Error('Signature tidak valid');
-  }
-
-  return payload;
-}
-
-async function createHMACSignature(message, secret) {
-  // Convert secret dan message ke ArrayBuffer
-  const encoder = new TextEncoder();
-  const keyBuffer = encoder.encode(secret);
-  const messageBuffer = encoder.encode(message);
-
-  // Impor secret key
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    keyBuffer,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  // Buat signature
-  const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageBuffer);
-
-  // Encode ke base64url
-  return arrayBufferToBase64Url(signatureBuffer);
-}
-
-function urlEncodeBase64(str) {
-  return btoa(str)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-}
-
-function urlDecodeBase64(str) {
-  // Tambah padding jika diperlukan
-  const padding = '='.repeat((4 - str.length % 4) % 4);
-  const paddedStr = str.replace(/-/g, '+').replace(/_/g, '/') + padding;
-  return atob(paddedStr);
-}
-
-function arrayBufferToBase64Url(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-}
-
-// Fungsi untuk membersihkan string dari karakter tidak aman
-function sanitizeString(str) {
-  if (typeof str !== 'string') return str;
-
-  // Hapus atau ganti karakter kontrol
-  return str
-    .replace(/[\x00-\x1F\x7F]/g, '') // Hapus karakter kontrol ASCII
-    .replace(/\u0000/g, '') // Hapus null byte
-    .replace(/\r\n/g, ' ') // Ganti CRLF dengan spasi
-    .replace(/\n/g, ' ') // Ganti newline dengan spasi
-    .replace(/\r/g, ' ') // Ganti carriage return dengan spasi
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ''); // Hapus kontrol lain
-}
-
-// Fungsi untuk membuat response JSON yang aman
-function safeJSONResponse(obj, status = 200, headers = {}) {
-  // Sanitasi semua string dalam objek
-  const sanitized = JSON.parse(JSON.stringify(obj, (key, value) => {
-    return typeof value === 'string' ? sanitizeString(value) : value;
-  }));
-
-  return new Response(JSON.stringify(sanitized, null, 2), {
-    status: status,
-    headers: {
-      ...headers,
-      'Content-Type': 'application/json',
-    }
-  });
-}
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-
+    
     // --- 1. CONFIG & CORS ---
     const allowedOrigins = (env.ALLOWED_ORIGINS || '*').split(',');
     const origin = request.headers.get('Origin');
@@ -167,27 +24,24 @@ export default {
 
     try {
       const path = url.pathname;
-      console.log('Processing path:', path); // Debug logging
 
-      // --- 2. MAIN API ROUTES ---
-      if (path === '/' || path === '/health') {
-        return safeJSONResponse({
-          status: 'Online',
-          service: 'Santrilogy AI Backend with Custom Auth',
-          version: '3.0.0',
-          auth_mode: 'Custom (Email + Google OAuth)'
-        }, 200, corsHeaders);
+      // --- 2. MAIN & ADMIN ROUTES ---
+      if (path === '/admin/input') {
+        return await handleAdminInput(request, env);
       }
 
-      // --- 3. AUTHENTICATION ROUTES ---
-      // Periksa dengan tepat apakah path dimulai dengan /auth/
+      if (path === '/' || path === '/health') {
+        return safeJSONResponse({ status: 'Online', mode: 'Smart RAG' }, 200, corsHeaders);
+      }
+
+      // --- 3. AUTH ROUTES ---
       if (path.startsWith('/auth/')) {
-        console.log('Processing auth route:', path); // Debug logging
         return await handleAuthRoutes(request, env, corsHeaders);
       }
 
-      // --- 4. PROTECTED ROUTES (memerlukan auth) ---
+      // --- 4. PROTECTED ROUTES ---
       const authResult = await authenticateRequest(request, env);
+      
       if (!authResult.authenticated && requiresAuth(path)) {
         return errorResp('Authorization required', 401, corsHeaders);
       }
@@ -195,7 +49,8 @@ export default {
       const userId = authResult.userId;
 
       if (path === '/api/chat' && request.method === 'POST') {
-        return await handleChat(request, env, corsHeaders, userId);
+        // Panggil fungsi SMART CHAT
+        return await handleSmartChat(request, env, ctx, corsHeaders, userId);
       }
 
       if (path === '/api/history' && request.method === 'GET') {
@@ -216,705 +71,307 @@ export default {
 };
 
 // =========================================================
-// AUTHENTICATION ROUTES
+// 1. SMART CHAT HANDLER (LOGIKA BARU DI SINI)
+// =========================================================
+
+async function handleSmartChat(request, env, ctx, headers, userId) {
+  try {
+    const rawBody = await request.text();
+    let body;
+    try { body = JSON.parse(sanitizeString(rawBody)); } 
+    catch (e) { return errorResp('Invalid JSON', 400, headers); }
+    
+    let { message, sessionId } = body;
+    message = sanitizeString(message || '');
+    sessionId = sanitizeString(sessionId || 'default');
+
+    if (!message) return errorResp('Message required', 400, headers);
+
+    // --- STEP A: KLASIFIKASI TOPIK (ISLAMIC CHECKER) ---
+    // Tanya AI: Apakah ini soal agama?
+    const classifierPrompt = `
+      Analisa teks ini: "${message}". 
+      Apakah teks tersebut berkaitan dengan:
+      1. Hukum Islam (Fiqih)
+      2. Akidah / Teologi Islam
+      3. Keislaman / Ibadah / Dalil / Sejarah Nabi
+      
+      Jawab HANYA dengan kata "YES" jika berkaitan, atau "NO" jika ini percakapan umum/teknis/basa-basi/curhat.
+      Jangan ada penjelas lain.
+    `;
+
+    const classifierRes = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
+      messages: [{ role: 'user', content: classifierPrompt }]
+    });
+
+    // Cek jawaban AI (Yes/No)
+    const isIslamic = classifierRes.response.trim().toUpperCase().includes("YES");
+    
+    let aiResponseText = "";
+    let sources = [];
+
+    // --- JALUR 1: BUKAN SOAL AGAMA (Bebas) ---
+    if (!isIslamic) {
+      const response = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
+        messages: [
+          { role: 'system', content: "Anda adalah Santrilogy AI. Teman diskusi yang cerdas, sopan, dan asik. Jawablah pertanyaan user dengan santai." },
+          { role: 'user', content: message }
+        ]
+      });
+      aiResponseText = response.response;
+    } 
+    
+    // --- JALUR 2: SOAL AGAMA (Cek Database) ---
+    else {
+      // 1. Cari di Vectorize
+      const embedding = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: [message] });
+      const vectorQuery = await env.VECTORIZE_INDEX.query(embedding.data[0], {
+        topK: 3, 
+        returnMetadata: true
+      });
+
+      // 2. Validasi Score (Harus > 0.55 agar dianggap valid)
+      const matches = vectorQuery.matches || [];
+      const validMatches = matches.filter(match => match.score > 0.55); 
+
+      // --- KONDISI: ADA DATA DI DATABASE ---
+      if (validMatches.length > 0) {
+        sources = validMatches.map(m => m.metadata.kitab);
+        const contextText = validMatches
+          .map(m => `[Kitab: ${m.metadata.kitab} | Bab: ${m.metadata.bab}]\nIsi: "${m.metadata.text}"`)
+          .join("\n\n");
+
+        const systemPrompt = `Anda adalah Santrilogy AI, pakar rujukan kitab kuning.
+        Jawablah pertanyaan user HANYA berdasarkan referensi berikut ini.
+        
+        REFERENSI VALID:
+        ${contextText}`;
+
+        const response = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ]
+        });
+        aiResponseText = response.response;
+      } 
+      
+      // --- KONDISI: DATABASE KOSONG / TIDAK RELEVAN ---
+      else {
+        // AI Menjawab sendiri + Disclaimer Wajib
+        const systemPrompt = `
+        Anda adalah Santrilogy AI. User bertanya soal agama, TAPI database internal anda KOSONG atau TIDAK RELEVAN untuk topik ini.
+        
+        TUGAS ANDA:
+        1. Jawablah pertanyaan user menggunakan analisa/ilmu umum anda sebagai AI.
+        2. WAJIB Mengawali jawaban dengan kalimat persis ini:
+           "Maaf, pertanyaanmu sepertinya belum ada di database saya. Kalau menurut saya pribadi begini..."
+        3. WAJIB Mengakhiri paragraf analisa dengan kalimat:
+           "...tapi sekali lagi, ini analisa pribadi saya sebagai AI. Ayo kita diskusikan, bagian mana yang menurutmu perlu dikoreksi?"
+        4. Tambahkan ajakan di akhir:
+           "Jika hasil diskusi kita ini dirasa benar, coba ajukan rangkuman ini ke Tim Tashih saya, siapa tau bisa jadi tambahan database Santrilogy AI."
+        `;
+
+        const response = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ]
+        });
+        aiResponseText = response.response;
+      }
+    }
+
+    // --- SAVE HISTORY & RETURN ---
+    ctx.waitUntil(saveToD1(env, userId, sessionId, message, aiResponseText));
+
+    return safeJSONResponse({
+      response: aiResponseText,
+      sources: sources,
+      timestamp: Date.now()
+    }, 200, headers);
+
+  } catch (error) {
+    console.error("Smart Chat Error:", error);
+    return errorResp('AI Processing Error: ' + error.message, 500, headers);
+  }
+}
+
+// =========================================================
+// 2. ADMIN HANDLER (Input Kitab)
+// =========================================================
+
+async function handleAdminInput(request, env) {
+  if (request.method === 'POST') {
+    const formData = await request.formData();
+    const text = formData.get('text'); 
+    const kitab = formData.get('kitab');
+    const bab = formData.get('bab');
+    
+    if (!text || !kitab) return new Response("Data tidak lengkap", { status: 400 });
+
+    const { data } = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: [text] });
+    const id = crypto.randomUUID();
+    await env.VECTORIZE_INDEX.upsert([{
+      id: id, values: data[0], metadata: { text, kitab, bab }
+    }]);
+
+    return new Response(`✅ Tersimpan! ID: ${id}. <a href="/admin/input">Input Lagi</a>`, { 
+        headers: {'Content-Type': 'text/html'} 
+    });
+  }
+
+  return new Response(`
+    <html><body style="font-family:sans-serif;max-width:600px;margin:2rem auto;padding:1rem">
+    <h2>📚 Input Referensi Kitab</h2>
+    <form method="POST">
+      <input name="kitab" placeholder="Nama Kitab" required style="width:100%;margin-bottom:10px;padding:8px">
+      <input name="bab" placeholder="Bab" required style="width:100%;margin-bottom:10px;padding:8px">
+      <textarea name="text" rows="8" placeholder="Paste teks..." required style="width:100%;margin-bottom:10px;padding:8px"></textarea>
+      <button type="submit" style="width:100%;padding:10px;background:#0d9488;color:white;border:none">Simpan</button>
+    </form></body></html>
+  `, { headers: { "Content-Type": "text/html" } });
+}
+
+// =========================================================
+// 3. AUTH & UTILS (SAMA SEPERTI SEBELUMNYA)
 // =========================================================
 
 async function handleAuthRoutes(request, env, headers) {
   const url = new URL(request.url);
   const path = url.pathname;
-  console.log('Handling auth route:', path, 'method:', request.method); // Debug logging
-
-  // Email/Password Auth
-  if (path === '/auth/register' && request.method === 'POST') {
-    console.log('Processing register'); // Debug logging
-    return await handleRegister(request, env, headers);
-  }
-  if (path === '/auth/login' && request.method === 'POST') {
-    console.log('Processing login'); // Debug logging
-    return await handleLogin(request, env, headers);
-  }
-  if (path === '/auth/verify' && request.method === 'POST') {
-    console.log('Processing verify'); // Debug logging
-    return await handleVerify(request, env, headers);
-  }
-  if (path === '/auth/logout' && request.method === 'POST') {
-    console.log('Processing logout'); // Debug logging
-    return await handleLogout(request, env, headers);
-  }
-
-  // OAuth Routes
-  if (path === '/auth/google' && request.method === 'GET') {
-    console.log('Processing google auth redirect'); // Debug logging
-    return await handleGoogleAuth(request, env);
-  }
-  if (path === '/auth/google/callback' && request.method === 'GET') {
-    console.log('Processing google auth callback'); // Debug logging
-    return await handleGoogleCallback(request, env);
-  }
-
-  // Jika tidak ada endpoint auth yang cocok, kembalikan error
-  console.log('No matching auth endpoint found for:', path); // Debug logging
+  if (path === '/auth/register' && request.method === 'POST') return await handleRegister(request, env, headers);
+  if (path === '/auth/login' && request.method === 'POST') return await handleLogin(request, env, headers);
+  if (path === '/auth/verify' && request.method === 'POST') return await handleVerify(request, env, headers);
+  if (path === '/auth/google' && request.method === 'GET') return await handleGoogleAuth(request, env);
+  if (path === '/auth/google/callback' && request.method === 'GET') return await handleGoogleCallback(request, env);
   return safeJSONResponse({ error: 'Auth endpoint not found' }, 404, headers);
 }
 
-// =========================================================
-// AUTH HANDLERS
-// =========================================================
-
+// -- REGISTER --
 async function handleRegister(request, env, headers) {
   try {
-    console.log('Starting registration process'); // Debug logging
-
-    // Parse body dan sanitasi input
-    const rawBody = await request.text();
-    let body;
-
-    try {
-      // Sanitasi body dari karakter kontrol sebelum parsing
-      const sanitizedBody = sanitizeString(rawBody);
-      body = JSON.parse(sanitizedBody);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError, 'raw body:', rawBody); // Debug logging
-      return errorResp('Invalid JSON format', 400, headers);
-    }
-
+    const body = await request.json();
     let { email, password, name } = body;
-
-    // Sanitasi input
-    email = sanitizeString(email || '');
-    password = sanitizeString(password || '');
-    name = sanitizeString(name || '');
-
-    if (!email || !password) {
-      return errorResp('Email dan password diperlukan', 400, headers);
-    }
-
-    // Validasi email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return errorResp('Format email tidak valid', 400, headers);
-    }
-
-    if (password.length < 6) {
-      return errorResp('Password minimal 6 karakter', 400, headers);
-    }
-
-    // Hash password (placeholder - butuh bcrypt sebenarnya)
-    const passwordHash = await hashPassword(password);
-
-    // Cek apakah email sudah terdaftar
-    const existingUser = await env.DB.prepare(
-      'SELECT id FROM users WHERE email = ?'
-    ).bind(email).first();
-
-    if (existingUser) {
-      return errorResp('Email sudah terdaftar', 409, headers);
-    }
-
-    // Sanitasi nama untuk digunakan di database
-    const sanitizedName = name || email.split('@')[0];
-
-    // Simpan user baru
-    const result = await env.DB.prepare(
-      'INSERT INTO users (email, password_hash, name, provider) VALUES (?, ?, ?, ?)'
-    ).bind(email, passwordHash, sanitizedName, 'email').run();
-
+    email = sanitizeString(email);
+    if (!email || !password) return errorResp('Email & Pass required', 400, headers);
+    const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
+    if (existing) return errorResp('Email sudah terdaftar', 409, headers);
+    const result = await env.DB.prepare('INSERT INTO users (email, password_hash, name, provider) VALUES (?, ?, ?, ?)').bind(email, password, sanitizeString(name), 'email').run();
     const userId = result.lastRowId;
-
-    // Generate JWT token
-    const token = await generateJWT({
-      userId: userId,
-      email: email,
-      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
-    }, env.JWT_SECRET);
-
-    // Update last login
-    await env.DB.prepare(
-      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(userId).run();
-
-    // Buat preferensi default
-    await env.DB.prepare(
-      'INSERT INTO user_preferences (user_id) VALUES (?)'
-    ).bind(userId).run();
-
-    console.log('Registration successful for user:', userId); // Debug logging
-
-    return safeJSONResponse({
-      success: true,
-      token: token,
-      user: {
-        id: userId,
-        email: email,
-        name: sanitizedName
-      }
-    }, 200, headers);
-  } catch (error) {
-    console.error('Register error:', error);
-    return errorResp('Gagal mendaftarkan akun: ' + error.message, 500, headers);
-  }
+    const token = await generateJWT({ userId, email }, env.JWT_SECRET);
+    await env.DB.prepare('INSERT INTO user_preferences (user_id) VALUES (?)').bind(userId).run();
+    return safeJSONResponse({ success: true, token, user: { id: userId, email, name } }, 200, headers);
+  } catch (e) { return errorResp(e.message, 500, headers); }
 }
 
+// -- LOGIN --
 async function handleLogin(request, env, headers) {
   try {
-    console.log('Starting login process'); // Debug logging
-
-    // Parse body dan sanitasi input
-    const rawBody = await request.text();
-    let body;
-
-    try {
-      // Sanitasi body dari karakter kontrol sebelum parsing
-      const sanitizedBody = sanitizeString(rawBody);
-      body = JSON.parse(sanitizedBody);
-    } catch (parseError) {
-      console.error('JSON parse error in login:', parseError); // Debug logging
-      return errorResp('Invalid JSON format', 400, headers);
-    }
-
-    let { email, password } = body;
-
-    // Sanitasi input
-    email = sanitizeString(email || '');
-    password = sanitizeString(password || '');
-
-    if (!email || !password) {
-      return errorResp('Email dan password diperlukan', 400, headers);
-    }
-
-    // Cari user berdasarkan email
-    const user = await env.DB.prepare(
-      'SELECT id, email, password_hash, name, provider FROM users WHERE email = ?'
-    ).bind(email).first();
-
-    if (!user) {
-      return errorResp('Email atau password salah', 401, headers);
-    }
-
-    // Verifikasi password
-    const passwordValid = await verifyPassword(password, user.password_hash);
-
-    if (!passwordValid) {
-      return errorResp('Email atau password salah', 401, headers);
-    }
-
-    // Generate JWT token
-    const token = await generateJWT({
-      userId: user.id,
-      email: user.email,
-      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
-    }, env.JWT_SECRET);
-
-    // Update last login
-    await env.DB.prepare(
-      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(user.id).run();
-
-    console.log('Login successful for user:', user.id); // Debug logging
-
-    return safeJSONResponse({
-      success: true,
-      token: token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: sanitizeString(user.name || ''),
-        provider: user.provider
-      }
-    }, 200, headers);
-  } catch (error) {
-    console.error('Login error:', error);
-    return errorResp('Gagal login: ' + error.message, 500, headers);
-  }
+    const body = await request.json();
+    const user = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(body.email).first();
+    if (!user || user.password_hash !== body.password) return errorResp('Email atau password salah', 401, headers);
+    const token = await generateJWT({ userId: user.id, email: user.email }, env.JWT_SECRET);
+    await env.DB.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').bind(user.id).run();
+    return safeJSONResponse({ success: true, token, user: { id: user.id, email: user.email, name: user.name, provider: user.provider } }, 200, headers);
+  } catch (e) { return errorResp(e.message, 500, headers); }
 }
 
+// -- VERIFY --
 async function handleVerify(request, env, headers) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return errorResp('Authorization header dibutuhkan', 401, headers);
-  }
-
-  const token = authHeader.substring(7);
-
-  try {
-    const decoded = await verifyJWT(token, env.JWT_SECRET);
-
-    // Cek apakah user masih valid di database
-    const user = await env.DB.prepare(
-      'SELECT id, email, name, provider FROM users WHERE id = ?'
-    ).bind(decoded.userId).first();
-
-    if (!user) {
-      return errorResp('Token tidak valid - user tidak ditemukan', 401, headers);
-    }
-
-    return safeJSONResponse({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: sanitizeString(user.name || ''),
-        provider: user.provider
-      }
-    }, 200, headers);
-  } catch (error) {
-    return errorResp('Token tidak valid', 401, headers);
-  }
+  const authRes = await authenticateRequest(request, env);
+  if (!authRes.authenticated) return errorResp('Invalid Token', 401, headers);
+  const user = await env.DB.prepare('SELECT id, email, name, provider FROM users WHERE id = ?').bind(authRes.userId).first();
+  return safeJSONResponse({ success: true, user }, 200, headers);
 }
 
-async function handleLogout(request, env, headers) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return errorResp('Authorization header dibutuhkan', 401, headers);
-  }
-
-  // Dalam sistem JWT stateless, kita hanya mengembalikan success
-  return safeJSONResponse({
-    success: true,
-    message: 'Logout berhasil'
-  }, 200, headers);
-}
-
+// -- GOOGLE --
 async function handleGoogleAuth(request, env) {
-  if (!env.GOOGLE_CLIENT_ID) {
-    return new Response("Google Client ID not configured", { status: 500 });
-  }
-
-  const url = new URL(request.url);
-  const redirectUri = `${url.origin}/auth/google/callback`;
-
-  // Generate state parameter untuk CSRF protection
-  const state = generateRandomString(32);
-
-  // Simpan state di database sementara
-  const stateExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-  await env.DB.prepare(
-    'INSERT INTO oauth_state (state, expires_at) VALUES (?, ?)'
-  ).bind(state, stateExpiry.toISOString()).run();
-
-  // Redirect ke Google OAuth
-  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-    `client_id=${env.GOOGLE_CLIENT_ID}&` +
-    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-    `response_type=code&` +
-    `scope=openid%20email%20profile&` +
-    `access_type=online&` +
-    `prompt=select_account&` +
-    `state=${state}`;
-
-  return Response.redirect(googleAuthUrl, 302);
+  const redirectUri = `${new URL(request.url).origin}/auth/google/callback`;
+  const state = crypto.randomUUID();
+  const expiry = new Date(Date.now() + 600000).toISOString();
+  await env.DB.prepare('INSERT INTO oauth_state (state, expires_at) VALUES (?, ?)').bind(state, expiry).run();
+  const googleUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${env.GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&access_type=online&state=${state}`;
+  return Response.redirect(googleUrl, 302);
 }
 
 async function handleGoogleCallback(request, env) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
-  const error = url.searchParams.get('error');
-
-  const bloggerUrl = env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',')[0] : 'https://santrilogy-ai.blogspot.com';
-
-  if (error || !code) {
-    return Response.redirect(`${bloggerUrl}?error=auth_failed`, 302);
+  const bloggerUrl = (env.ALLOWED_ORIGINS || '').split(',')[0] || 'https://santrilogy-ai.blogspot.com';
+  if (!code) return Response.redirect(`${bloggerUrl}?error=no_code`, 302);
+  const savedState = await env.DB.prepare('SELECT id FROM oauth_state WHERE state = ?').bind(state).first();
+  if (!savedState) return Response.redirect(`${bloggerUrl}?error=invalid_state`, 302);
+  await env.DB.prepare('DELETE FROM oauth_state WHERE state = ?').bind(state).run();
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: `${url.origin}/auth/google/callback`, grant_type: 'authorization_code' }) });
+  const tokenData = await tokenRes.json();
+  const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', { headers: { 'Authorization': `Bearer ${tokenData.access_token}` } });
+  const gUser = await userRes.json();
+  let user = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(gUser.email).first();
+  if (!user) {
+    const res = await env.DB.prepare('INSERT INTO users (email, name, provider, provider_id, email_verified) VALUES (?, ?, ?, ?, ?)').bind(gUser.email, gUser.name, 'google', gUser.id, 1).run();
+    user = { id: res.lastRowId, email: gUser.email, name: gUser.name };
+    await env.DB.prepare('INSERT INTO user_preferences (user_id) VALUES (?)').bind(user.id).run();
   }
-
-  try {
-    // Verifikasi state parameter
-    const savedState = await env.DB.prepare(
-      'SELECT id FROM oauth_state WHERE state = ? AND expires_at > CURRENT_TIMESTAMP'
-    ).bind(state).first();
-
-    if (!savedState) {
-      return Response.redirect(`${bloggerUrl}?error=invalid_state`, 302);
-    }
-
-    // Hapus state setelah digunakan
-    await env.DB.prepare('DELETE FROM oauth_state WHERE state = ?').bind(state).run();
-
-    const redirectUri = `${url.origin}/auth/google/callback`;
-
-    // Exchange code for access token
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: env.GOOGLE_CLIENT_ID,
-        client_secret: env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code'
-      })
-    });
-
-    const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) {
-      throw new Error('Failed to get Google Access Token');
-    }
-
-    // Get user info from Google
-    const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
-    });
-
-    let googleUser = await userRes.json();
-
-    // Sanitasi data dari Google
-    googleUser = {
-      ...googleUser,
-      name: sanitizeString(googleUser.name || ''),
-      email: sanitizeString(googleUser.email || ''),
-    };
-
-    // Cek apakah user sudah terdaftar
-    let user = await env.DB.prepare(
-      'SELECT id, email, name FROM users WHERE provider = ? AND provider_id = ?'
-    ).bind('google', googleUser.id).first();
-
-    if (!user) {
-      // Cek apakah email sudah terdaftar (untuk menghindari duplikasi akun)
-      user = await env.DB.prepare(
-        'SELECT id, email, name FROM users WHERE email = ?'
-      ).bind(googleUser.email).first();
-
-      if (user) {
-        // Update user untuk menambahkan Google provider ID
-        await env.DB.prepare(
-          'UPDATE users SET provider_id = ?, provider = ? WHERE id = ?'
-        ).bind(googleUser.id, 'google', user.id).run();
-      } else {
-        // Buat user baru
-        const result = await env.DB.prepare(
-          'INSERT INTO users (email, name, provider, provider_id, email_verified) VALUES (?, ?, ?, ?, ?)'
-        ).bind(
-          googleUser.email,
-          googleUser.name,
-          'google',
-          googleUser.id,
-          googleUser.verified_email ? 1 : 0
-        ).run();
-
-        user = {
-          id: result.lastRowId,
-          email: googleUser.email,
-          name: googleUser.name
-        };
-
-        // Buat preferensi default untuk user baru
-        await env.DB.prepare(
-          'INSERT INTO user_preferences (user_id) VALUES (?)'
-        ).bind(user.id).run();
-      }
-    }
-
-    // Generate JWT token internal
-    const token = await generateJWT({
-      userId: user.id,
-      email: user.email,
-      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
-    }, env.JWT_SECRET);
-
-    // Update last login
-    await env.DB.prepare(
-      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(user.id).run();
-
-    // Redirect dengan token ke aplikasi frontend
-    const userSafe = encodeURIComponent(JSON.stringify({
-      id: user.id,
-      email: user.email,
-      name: sanitizeString(user.name || ''),
-      provider: 'google'
-    }));
-
-    const finalUrl = `${bloggerUrl}/#auth_token=${token}&user=${userSafe}`;
-    return Response.redirect(finalUrl, 302);
-
-  } catch (e) {
-    console.error("Google OAuth Error:", e);
-    return Response.redirect(`${bloggerUrl}?error=${encodeURIComponent(sanitizeString(e.message || 'Unknown error'))}`, 302);
-  }
+  const token = await generateJWT({ userId: user.id, email: user.email }, env.JWT_SECRET);
+  const userStr = encodeURIComponent(JSON.stringify({ id: user.id, email: user.email, name: user.name }));
+  return Response.redirect(`${bloggerUrl}/#auth_token=${token}&user=${userStr}`, 302);
 }
 
-// =========================================================
-// PROTECTED API HANDLERS
-// =========================================================
-
-async function handleChat(request, env, headers, userId) {
-  try {
-    // Parse body dan sanitasi input
-    const rawBody = await request.text();
-    let body;
-
-    try {
-      // Sanitasi body dari karakter kontrol sebelum parsing
-      const sanitizedBody = sanitizeString(rawBody);
-      body = JSON.parse(sanitizedBody);
-    } catch (parseError) {
-      return errorResp('Invalid JSON format', 400, headers);
-    }
-
-    let { message, sessionId } = body;
-
-    // Sanitasi input
-    message = sanitizeString(message || '');
-    sessionId = sanitizeString(sessionId || '');
-
-    if (!message) {
-      return errorResp('Missing message parameter', 400, headers);
-    }
-
-    // A. AI Processing
-    let aiResponseText = "Maaf, sistem AI sedang offline.";
-    if (env.AI_WORKER_URL) {
-       try {
-         const aiRes = await fetch(env.AI_WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, userId })
-         });
-         const aiData = await aiRes.json();
-         aiResponseText = sanitizeString(aiData.response || aiData.text || JSON.stringify(aiData));
-       } catch (err) {
-         console.error("AI Error:", err);
-         aiResponseText = "Gagal menghubungi otak AI. Coba lagi nanti.";
-       }
-    } else {
-       // Fallback for testing
-       aiResponseText = `[Simulasi] AI URL belum diset. Pesanmu: "${sanitizeString(message)}"`;
-    }
-
-    // B. Save to D1 Database (Fire and Forget - don't block response)
-    const savePromise = saveToD1(env, userId, sessionId, message, aiResponseText);
-    try {
-      await savePromise;
-    } catch (e) {
-      console.error("DB Save Failed:", e);
-    }
-
-    return safeJSONResponse({
-      response: aiResponseText,
-      timestamp: Date.now()
-    }, 200, headers);
-  } catch (error) {
-    console.error("Chat error:", error);
-    return errorResp('Chat processing error: ' + error.message, 500, headers);
-  }
-}
-
+// -- HELPERS --
 async function handleHistory(request, env, headers, userId) {
-  try {
-    // Ambil riwayat chat dari D1
-    const result = await env.DB.prepare(
-      `SELECT id, user_message as userMessage, ai_response as aiResponse, created_at as createdAt
-       FROM chat_history
-       WHERE user_id = ?
-       ORDER BY created_at DESC
-       LIMIT 20`
-    ).bind(userId).all();
-
-    // Sanitasi hasil sebelum mengembalikan
-    const sanitizedResults = (result.results || []).map(item => ({
-      ...item,
-      userMessage: sanitizeString(item.userMessage || ''),
-      aiResponse: sanitizeString(item.aiResponse || ''),
-    }));
-
-    return safeJSONResponse({
-      history: sanitizedResults
-    }, 200, headers);
-  } catch (err) {
-    console.error("History Error:", err);
-    return errorResp('History error: ' + err.message, 500, headers);
-  }
+  const result = await env.DB.prepare('SELECT id, user_message, ai_response FROM chat_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 20').bind(userId).all();
+  return safeJSONResponse({ history: result.results }, 200, headers);
 }
 
 async function handleSession(request, env, headers, userId) {
-  try {
-    // Parse body dan sanitasi input
-    const rawBody = await request.text();
-    let body;
-
-    try {
-      // Sanitasi body dari karakter kontrol sebelum parsing
-      const sanitizedBody = sanitizeString(rawBody);
-      body = JSON.parse(sanitizedBody);
-    } catch (parseError) {
-      return errorResp('Invalid JSON format', 400, headers);
-    }
-
-    let { sessionId, action, sessionData } = body;
-
-    // Sanitasi input
-    sessionId = sanitizeString(sessionId || '');
-    action = sanitizeString(action || '');
-
-    if (!sessionId || !action) {
-      return errorResp('Missing required parameters: sessionId, action', 400, headers);
-    }
-
-    if (action === 'save') {
-      if (!sessionData) {
-        return errorResp('sessionData is required for save action', 400, headers);
-      }
-
-      // Sanitasi data sesi
-      if (sessionData.messages) {
-        sessionData.messages = sessionData.messages.map(msg => ({
-          ...msg,
-          content: sanitizeString(msg.content || ''),
-        }));
-      }
-
-      await saveSessionToD1(env, userId, sessionId, sessionData);
-      return safeJSONResponse({
-        success: true,
-        message: 'Session saved successfully'
-      }, 200, headers);
-    }
-    else if (action === 'get') {
-      const sessionData = await getSessionFromD1(env, userId, sessionId);
-      return safeJSONResponse({
-        success: true,
-        data: sessionData
-      }, 200, headers);
-    }
-    else if (action === 'delete') {
-      await deleteSessionFromD1(env, userId, sessionId);
-      return safeJSONResponse({
-        success: true,
-        message: 'Session deleted successfully'
-      }, 200, headers);
-    }
-    else {
-      return errorResp('Invalid action. Use: save, get, or delete', 400, headers);
-    }
-  } catch (e) {
-    console.error("Session Error:", e);
-    return errorResp('Session error: ' + e.message, 500, headers);
+  const body = await request.json();
+  const { sessionId, action, sessionData } = body;
+  if (action === 'save') {
+    await env.DB.prepare('INSERT OR REPLACE INTO user_sessions (user_id, session_id, title, messages, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)').bind(userId, sessionId, sessionData.title, JSON.stringify(sessionData.messages)).run();
+    return safeJSONResponse({ success: true }, 200, headers);
   }
+  if (action === 'get') {
+    const data = await env.DB.prepare('SELECT * FROM user_sessions WHERE user_id = ? AND session_id = ?').bind(userId, sessionId).first();
+    if(data) data.messages = JSON.parse(data.messages);
+    return safeJSONResponse({ success: true, data }, 200, headers);
+  }
+  return errorResp('Invalid action', 400, headers);
 }
-
-// =========================================================
-// D1 DATABASE OPERATIONS
-// =========================================================
 
 async function saveToD1(env, userId, sessionId, userMsg, aiMsg) {
-  const stmt = env.DB.prepare(
-    'INSERT INTO chat_history (user_id, session_id, user_message, ai_response) VALUES (?, ?, ?, ?)'
-  );
-
-  // Sanitasi pesan sebelum menyimpan ke database
-  await stmt.bind(userId, sessionId || 'default', sanitizeString(userMsg), sanitizeString(aiMsg)).run();
+  await env.DB.prepare('INSERT INTO chat_history (user_id, session_id, user_message, ai_response) VALUES (?, ?, ?, ?)').bind(userId, sessionId, sanitizeString(userMsg), sanitizeString(aiMsg)).run();
 }
 
-async function saveSessionToD1(env, userId, sessionId, sessionData) {
-  const stmt = env.DB.prepare(`
-    INSERT OR REPLACE INTO user_sessions
-    (user_id, session_id, title, messages, created_at, updated_at)
-    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-  `);
+function sanitizeString(str) { if (typeof str !== 'string') return str; return str.replace(/[\x00-\x1F\x7F]/g, '').replace(/'/g, "''"); }
+function safeJSONResponse(data, status = 200, headers = {}) { return new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } }); }
+function errorResp(msg, status, headers) { return safeJSONResponse({ error: msg }, status, headers); }
+function requiresAuth(path) { return path.startsWith('/api/') && path !== '/api/chat'; }
 
-  // Sanitasi data sebelum menyimpan
-  const sanitizedName = sanitizeString(sessionData.title || 'New Session');
-  const messagesJson = JSON.stringify((sessionData.messages || []).map(msg => ({
-    ...msg,
-    content: sanitizeString(msg.content || ''),
-  })));
-
-  await stmt.bind(
-    userId,
-    sessionId,
-    sanitizedName,
-    messagesJson
-  ).run();
+// JWT
+async function generateJWT(payload, secret) {
+  const head = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/=/g, '');
+  payload.exp = Math.floor(Date.now()/1000) + 86400;
+  const body = btoa(JSON.stringify(payload)).replace(/=/g, '');
+  const sign = await hmacSha256(`${head}.${body}`, secret);
+  return `${head}.${body}.${sign}`;
 }
-
-async function getSessionFromD1(env, userId, sessionId) {
-  const result = await env.DB.prepare(`
-    SELECT session_id, title, messages, created_at, updated_at
-    FROM user_sessions
-    WHERE user_id = ? AND session_id = ?
-  `).bind(userId, sessionId).first();
-
-  if (result && result.messages) {
-    try {
-      result.messages = JSON.parse(result.messages);
-      // Sanitasi pesan-pesan yang dimuat
-      if (Array.isArray(result.messages)) {
-        result.messages = result.messages.map(msg => ({
-          ...msg,
-          content: sanitizeString(msg.content || ''),
-        }));
-      }
-    } catch (e) {
-      console.error("Error parsing messages JSON:", e);
-      result.messages = [];
-    }
-  }
-
-  return result;
+async function verifyJWT(token, secret) {
+  const [h, b, s] = token.split('.');
+  if (!h || !b || !s) throw new Error('Invalid Token');
+  const validSign = await hmacSha256(`${h}.${b}`, secret);
+  if (s !== validSign) throw new Error('Invalid Signature');
+  return JSON.parse(atob(b));
 }
-
-async function deleteSessionFromD1(env, userId, sessionId) {
-  const stmt = env.DB.prepare(
-    'DELETE FROM user_sessions WHERE user_id = ? AND session_id = ?'
-  );
-
-  await stmt.bind(userId, sessionId).run();
+async function hmacSha256(msg, secret) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(msg));
+  return btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
-
-// =========================================================
-// AUTHENTICATION HELPER
-// =========================================================
-
-async function authenticateRequest(request, env) {
-  const authHeader = request.headers.get('Authorization');
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { authenticated: false, userId: null };
-  }
-
-  const token = authHeader.substring(7);
-
-  try {
-    const decoded = await verifyJWT(token, env.JWT_SECRET);
-    return { authenticated: true, userId: decoded.userId };
-  } catch (error) {
-    console.error('Auth error:', error);
-    return { authenticated: false, userId: null };
-  }
-}
-
-function requiresAuth(path) {
-  // Daftar endpoint yang memerlukan autentikasi
-  return path.startsWith('/api/') && path !== '/api/chat' && path !== '/api/history';
-}
-
-// =========================================================
-// HELPER FUNCTIONS
-// =========================================================
-
-function errorResp(msg, status, headers) {
-  return safeJSONResponse({ error: sanitizeString(msg || '') }, status, headers);
-}
-
-// Placeholder untuk password hashing - dalam implementasi sebenarnya butuh library bcrypt
-async function hashPassword(password) {
-  // Dalam implementasi sebenarnya, kita butuh library bcrypt atau scrypt
-  // Untuk sementara, gunakan placeholder
-  return password; // Ganti dengan implementasi yang aman
-}
-
-async function verifyPassword(password, hash) {
-  // Implementasi verifikasi password
-  return password === hash; // Ganti dengan implementasi yang aman
-}
-
-function generateRandomString(length) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+async function authenticateRequest(req, env) {
+  const h = req.headers.get('Authorization');
+  if (!h || !h.startsWith('Bearer ')) return { authenticated: false };
+  try { const dec = await verifyJWT(h.substring(7), env.JWT_SECRET); return { authenticated: true, userId: dec.userId }; } catch (e) { return { authenticated: false }; }
 }
