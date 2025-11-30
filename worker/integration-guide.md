@@ -11,7 +11,7 @@ Pastikan Anda sudah:
 2. Mengkonfigurasi semua environment variables di Worker
 3. Mempunyai endpoint API yang berfungsi
 
-## Langkah 1: Ganti Referensi Firebase
+## Langkah 1: Ganti Referensi Firebase dengan Cloudflare D1 + JWT
 
 ### Hapus dari Template Blogger:
 - Semua skrip Firebase SDK
@@ -19,8 +19,8 @@ Pastikan Anda sudah:
 - Konfigurasi Firebase langsung
 
 ### Gantilah dengan:
-- Skrip `safe-template.js` yang baru
-- Panggilan API ke Cloudflare Worker
+- Skrip `worker-integration.js` yang baru
+- Panggilan API ke Cloudflare Worker dengan D1 + JWT
 
 ## Langkah 2: Update Konfigurasi Worker
 
@@ -48,13 +48,13 @@ saveSessionSecurely(sessionId, title, messages)
 ```
 
 ### Fungsi yang Digrandong:
-- `firebaseLoadHistory` → `loadHistorySecurely`
-- `firebaseSaveSession` → `saveSessionSecurely`
+- `loadHistorySecurely` → Fungsi untuk mengambil riwayat dari Cloudflare D1
+- `saveSessionSecurely` → Fungsi untuk menyimpan sesi ke Cloudflare D1
 - `firebaseLoadSession` → Gunakan `SantrilogyWorkerAPI.sessionOperation` dengan action 'get'
 - `firebaseDeleteSession` → Gunakan `SantrilogyWorkerAPI.sessionOperation` dengan action 'delete'
-- `firebaseGoogleAuth` → `secureGoogleAuth` (hanya frontend, validasi server)
-- `firebaseEmailAuth` → Gunakan `SantrilogyWorkerAPI.authenticate`
-- `firebaseLogout` → Tangani di frontend (hapus lokal storage, dll)
+- `secureGoogleAuth` → Fungsi otentikasi Google hanya frontend, validasi server dilakukan di worker
+- `SantrilogyWorkerAPI.authenticate` → Fungsi untuk otentikasi melalui endpoint worker
+- `frontend logout` → Tangani di frontend (hapus lokal storage, dll)
 
 ## Langkah 4: Update Template Blogger
 

@@ -118,7 +118,7 @@ var SantrilogyWorkerAPI = {
 // Contoh integrasi dengan fungsi-fungsi Santrilogy AI yang ada
 // Ganti semua panggilan Firebase langsung dengan panggilan ke SantrilogyWorkerAPI
 
-// Contoh: Ganti firebaseSaveSession
+// Contoh: Ganti untuk Cloudflare D1 + JWT saveSession
 function saveSessionSecurely(sessionId, title, messages) {
     const userId = getCurrentUserId(); // Implementasi fungsi ini sesuai kebutuhan
     return SantrilogyWorkerAPI.sessionOperation(sessionId, userId, 'save', {
@@ -128,7 +128,7 @@ function saveSessionSecurely(sessionId, title, messages) {
     });
 }
 
-// Contoh: Ganti firebaseLoadHistory
+// Contoh: Ganti untuk Cloudflare D1 + JWT loadHistory
 async function loadHistorySecurely() {
     const userId = getCurrentUserId();
     if (!userId) return [];
@@ -142,7 +142,7 @@ async function loadHistorySecurely() {
     }
 }
 
-// Contoh: Ganti firebaseGoogleAuth
+// Contoh: Ganti untuk Cloudflare D1 + JWT googleAuth
 async function secureGoogleAuth() {
     // Implementasi login Google di frontend, lalu kirim token ke worker
     // untuk validasi di server side

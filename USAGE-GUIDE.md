@@ -10,7 +10,7 @@ Repository ini berisi file-file JavaScript terpisah dari template Blogger Santri
 ai-santrilogy-for-blogger/
 ├── js/
 │   ├── main.js          # Fungsi utama aplikasi
-│   ├── firebase.js      # Konfigurasi dan fungsi Firebase (versi aman)
+│   ├── (removed)          # Firebase files removed - using Cloudflare D1 + JWT instead
 │   └── utils.js         # Fungsi utilitas umum
 ├── README.md           # Dokumentasi utama
 ├── CDN-CONFIG.md       # Konfigurasi CDN
@@ -28,13 +28,13 @@ ai-santrilogy-for-blogger/
 2. Clone repository ke lokal Anda
 3. Tambahkan file-file dari folder ini ke repository Anda
 
-### 2. Ganti API Keys Firebase (PENTING)
+### 2. Konfigurasi Cloudflare D1 + JWT (PENTING)
 
-Sebelum menggunakan template di produksi, **harus** mengganti API keys Firebase:
+Sebelum menggunakan template di produksi, **harus** mengkonfigurasi Cloudflare D1 + JWT:
 
 1. Lihat file `API-KEYS-GUIDE.md` untuk instruksi lengkap
 2. Gunakan file `js/firebase-safe.js` sebagai referensi
-3. Buat proyek Firebase baru dan ganti konfigurasi
+3. Setup Cloudflare Worker dengan D1 database dan konfigurasi JWT
 
 ### 3. Gunakan CDN di Template Blogger
 

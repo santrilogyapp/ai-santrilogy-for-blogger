@@ -2382,38 +2382,51 @@
         }
     };
 
-    // Fungsi pengganti Firebase untuk kompatibilitas
-    var FirebaseReplacement = {
+    // Fungsi pengganti Firebase dengan Cloudflare D1 + JWT untuk kompatibilitas
+    var CloudflareD1Replacement = {
         loadHistory: async function() {
             try {
                 const userId = this.getCurrentUserId();
                 if (!userId) return [];
 
-                const result = await SantrilogyBackend.getHistory(userId);
-                var histories = result ? (result.history ? result.history : []) : [];
-                var mapped = [];
-                for (var i = 0; i < histories.length; i++) {
-                    var item = histories[i];
-                    var id = item ? (item.id ? item.id : 'session_' + i) : 'session_' + i;
-                    var title = item ? (item.title ? item.title : 'Untitled Session') : 'Untitled Session';
-                    var messageCount = 0;
-                    if (item) {
-                        if (item.messages) {
-                            if (typeof item.messages.length != 'undefined') {
-                                messageCount = item.messages.length;
+                // Ganti dengan panggilan ke endpoint Cloudflare D1 + JWT Anda
+                const response = await fetch('/api/history', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`  // atau mekanisme JWT Anda
+                    }
+                });
+
+                if (response.ok) {
+                    const histories = await response.json();
+                    var mapped = [];
+                    for (var i = 0; i < histories.length; i++) {
+                        var item = histories[i];
+                        var id = item ? (item.id ? item.id : 'session_' + i) : 'session_' + i;
+                        var title = item ? (item.title ? item.title : 'Untitled Session') : 'Untitled Session';
+                        var messageCount = 0;
+                        if (item) {
+                            if (item.messages) {
+                                if (typeof item.messages.length != 'undefined') {
+                                    messageCount = item.messages.length;
+                                }
                             }
                         }
-                    }
-                    var timestamp = item ? (item.timestamp ? item.timestamp : Date.now()) : Date.now();
+                        var timestamp = item ? (item.timestamp ? item.timestamp : Date.now()) : Date.now();
 
-                    mapped.push({
-                        id: id,
-                        title: title,
-                        messageCount: messageCount,
-                        timestamp: timestamp
-                    });
+                        mapped.push({
+                            id: id,
+                            title: title,
+                            messageCount: messageCount,
+                            timestamp: timestamp
+                        });
+                    }
+                    return mapped;
+                } else {
+                    console.error('Failed to load history:', response.status);
+                    return [];
                 }
-                return mapped;
             } catch (error) {
                 console.error('Load history error:', error);
                 return [];
@@ -2423,10 +2436,24 @@
         saveSession: async function(sessionId, title, messages) {
             try {
                 const userId = this.getCurrentUserId();
-                const result = await SantrilogyBackend.sessionOp(
-                    sessionId, userId, 'save', {title, messages}
-                );
-                return result.success === true;
+
+                // Ganti dengan panggilan ke endpoint Cloudflare D1 + JWT Anda
+                const response = await fetch('/api/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`  // atau mekanisme JWT Anda
+                    },
+                    body: JSON.stringify({
+                        id: sessionId,
+                        userId: userId,
+                        title: title,
+                        messages: messages
+                    })
+                });
+
+                const result = await response.json();
+                return response.ok && result.success === true;
             } catch (error) {
                 console.error('Save session error:', error);
                 return false;
@@ -2436,10 +2463,23 @@
         loadSession: async function(sessionId) {
             try {
                 const userId = this.getCurrentUserId();
-                const result = await SantrilogyBackend.sessionOp(
-                    sessionId, userId, 'get'
-                );
-                return result.data ? result.data : null;
+
+                // Ganti dengan panggilan ke endpoint Cloudflare D1 + JWT Anda
+                const response = await fetch(`/api/session/${sessionId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`  // atau mekanisme JWT Anda
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    return result.data ? result.data : null;
+                } else {
+                    console.error('Failed to load session:', response.status);
+                    return null;
+                }
             } catch (error) {
                 console.error('Load session error:', error);
                 return null;
@@ -2449,10 +2489,18 @@
         deleteSession: async function(sessionId) {
             try {
                 const userId = this.getCurrentUserId();
-                const result = await SantrilogyBackend.sessionOp(
-                    sessionId, userId, 'delete'
-                );
-                return result.success === true;
+
+                // Ganti dengan panggilan ke endpoint Cloudflare D1 + JWT Anda
+                const response = await fetch(`/api/session/${sessionId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`  // atau mekanisme JWT Anda
+                    }
+                });
+
+                const result = await response.json();
+                return response.ok && result.success === true;
             } catch (error) {
                 console.error('Delete session error:', error);
                 return false;
@@ -2460,20 +2508,21 @@
         }
     };
 
-    FirebaseReplacement.getCurrentUserId = function() {
-        let userId = localStorage.getItem('santrilogy_user_id');
+    CloudflareD1Replacement.getCurrentUserId = function() {
+        let userId = localStorage.getItem('user_id');
         if (!userId) {
-            userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('santrilogy_user_id', userId);
+            // Jika tidak ada user ID yang tersimpan, buat ID baru atau kembalikan null
+            // tergantung pada logika otentikasi Cloudflare D1 + JWT Anda
+            userId = null;
         }
         return userId;
     };
 
     // Simulasikan fungsi-fungsi firebase agar kompatibel dengan main.js
-    window.firebaseLoadHistory = FirebaseReplacement.loadHistory;
-    window.firebaseSaveSession = FirebaseReplacement.saveSession;
-    window.firebaseLoadSession = FirebaseReplacement.loadSession;
-    window.firebaseDeleteSession = FirebaseReplacement.deleteSession;
+    window.firebaseLoadHistory = CloudflareD1Replacement.loadHistory;
+    window.firebaseSaveSession = CloudflareD1Replacement.saveSession;
+    window.firebaseLoadSession = CloudflareD1Replacement.loadSession;
+    window.firebaseDeleteSession = CloudflareD1Replacement.deleteSession;
 
     // Pastikan fungsi-fungsi ini tersedia sebelum main.js mencoba menggunakannya
     window.firebaseReady = true;
@@ -2568,7 +2617,7 @@
                 }
             }
 
-            // Cek apakah semua fungsi pengganti Firebase siap
+            // Cek apakah semua fungsi pengganti Cloudflare D1 + JWT siap
             var firebaseFunctionsReady = (
                 typeof window.firebaseLoadHistory !== 'undefined' &&
                 typeof window.firebaseSaveSession !== 'undefined' &&

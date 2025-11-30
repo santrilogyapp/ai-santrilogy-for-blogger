@@ -227,33 +227,19 @@ async function handleGoogleAuthCallback(request, env, headers) {
 
     const googleUser = await userInfoResponse.json();
 
-    // Exchange Google access token for Firebase ID token using Identity Toolkit
-    const firebaseTokenResponse = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${env.FIREBASE_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          postBody: `access_token=${tokenData.access_token}&providerId=google.com`,
-          requestUri: request.url,
-          returnIdpCredential: true,
-          returnSecureToken: true,
-        }),
-      }
-    );
-
-    if (!firebaseTokenResponse.ok) {
-      console.error('Firebase token exchange failed:', await firebaseTokenResponse.text());
-      throw new Error('Failed to exchange for Firebase token');
-    }
-
-    const firebaseData = await firebaseTokenResponse.json();
+    // Generate a JWT token for the authenticated user since we're using Cloudflare D1
+    const jwtPayload = {
+      sub: googleUser.sub, // Google user ID
+      email: googleUser.email,
+      name: googleUser.name,
+      picture: googleUser.picture,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours expiration
+    };
 
     // Create user data object
     const userData = {
-      uid: firebaseData.localId,
+      uid: googleUser.sub, // Use Google user ID as UID
       email: googleUser.email,
       displayName: googleUser.name,
       photoURL: googleUser.picture,
@@ -265,7 +251,7 @@ async function handleGoogleAuthCallback(request, env, headers) {
     const encodedUser = encodeURIComponent(JSON.stringify(userData));
 
     // Redirect back to the original origin with the token in the hash
-    const redirectUrl = `${redirectOrigin}/#token=${firebaseData.idToken}&user=${encodedUser}`;
+    const redirectUrl = `${redirectOrigin}/#token=${encodeURIComponent(JSON.stringify(jwtPayload))}&user=${encodedUser}`;
 
     return new Response(null, {
       status: 302,

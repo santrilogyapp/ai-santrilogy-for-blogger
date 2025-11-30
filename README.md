@@ -17,7 +17,7 @@ Template ini menyediakan:
 ```
 js/
 ├── main.js          # Fungsi utama aplikasi
-├── firebase.js      # Fungsi Firebase untuk otentikasi dan database
+├── worker-integration.js # Fungsi Cloudflare D1 + JWT untuk otentikasi dan database
 └── utils.js         # Fungsi utilitas umum
 ```
 

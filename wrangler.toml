@@ -4,13 +4,13 @@ compatibility_date = "2023-12-01"
 
 # Environment variables
 [vars]
-ALLOWED_ORIGINS = "https://santrilogy-ai.blogspot.com,https://www.santrilogy-ai.blogspot.com"
+ALLOWED_ORIGINS = "https://ai.santrilogy.com,https://santrilogy-ai.blogspot.com,https://www.santrilogy-ai.blogspot.com"
 
 # D1 Database binding
 [[d1_databases]]
 binding = "DB"  # Available in your Worker at env.DB
 database_name = "santrilogy-ai-db"
-database_id = "your-actual-database-id-here"  # Ganti dengan ID yang Anda dapatkan
+database_id = "85f0a1d6-ef9f-482c-b9cc-dd35b4843e5d"  # Ganti dengan ID yang Anda dapatkan
 
 # Environment-specific configuration
 [env.production]

@@ -2384,8 +2384,8 @@
                 }
             };
 
-            // Fungsi pengganti Firebase untuk kompatibilitas
-            var FirebaseReplacement = {
+            // Fungsi pengganti Firebase dengan Cloudflare D1 + JWT untuk kompatibilitas
+            var CloudflareD1Replacement = {
                 loadHistory: async function() {
                     try {
                         var userId = this.getCurrentUserId();
@@ -2463,7 +2463,7 @@
                 }
             };
 
-            FirebaseReplacement.getCurrentUserId = function() {
+            CloudflareD1Replacement.getCurrentUserId = function() {
                 try {
                     var userId = (typeof localStorage == 'object' && localStorage) ? localStorage.getItem('santrilogy_user_id') : null;
                     if (!userId) {
@@ -2482,10 +2482,10 @@
             // Pastikan window objek tersedia dan definisikan fungsi-fungsi
             if (typeof window !== 'undefined') {
                 // Simulasikan fungsi-fungsi firebase agar kompatibel dengan main.js
-                window.firebaseLoadHistory = typeof FirebaseReplacement.loadHistory === 'function' ? FirebaseReplacement.loadHistory : function() { console.error('firebaseLoadHistory not defined'); return Promise.resolve([]); };
-                window.firebaseSaveSession = typeof FirebaseReplacement.saveSession === 'function' ? FirebaseReplacement.saveSession : function() { console.error('firebaseSaveSession not defined'); return Promise.resolve(false); };
-                window.firebaseLoadSession = typeof FirebaseReplacement.loadSession === 'function' ? FirebaseReplacement.loadSession : function() { console.error('firebaseLoadSession not defined'); return Promise.resolve(null); };
-                window.firebaseDeleteSession = typeof FirebaseReplacement.deleteSession === 'function' ? FirebaseReplacement.deleteSession : function() { console.error('firebaseDeleteSession not defined'); return Promise.resolve(false); };
+                window.firebaseLoadHistory = typeof CloudflareD1Replacement.loadHistory === 'function' ? CloudflareD1Replacement.loadHistory : function() { console.error('firebaseLoadHistory not defined'); return Promise.resolve([]); };
+                window.firebaseSaveSession = typeof CloudflareD1Replacement.saveSession === 'function' ? CloudflareD1Replacement.saveSession : function() { console.error('firebaseSaveSession not defined'); return Promise.resolve(false); };
+                window.firebaseLoadSession = typeof CloudflareD1Replacement.loadSession === 'function' ? CloudflareD1Replacement.loadSession : function() { console.error('firebaseLoadSession not defined'); return Promise.resolve(null); };
+                window.firebaseDeleteSession = typeof CloudflareD1Replacement.deleteSession === 'function' ? CloudflareD1Replacement.deleteSession : function() { console.error('firebaseDeleteSession not defined'); return Promise.resolve(false); };
 
                 console.log('Cloudflare Worker integration loaded successfully');
 

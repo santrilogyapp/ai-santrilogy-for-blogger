@@ -351,14 +351,14 @@ var SantrilogyBackend = {
     }
 };
 
-// Fungsi pengganti untuk Firebase di template (now using Cloudflare D1 + JWT)
-var FirebaseReplacement = {
+// Fungsi pengganti untuk Firebase dengan Cloudflare D1 + JWT
+var CloudflareD1Replacement = {
     // Ganti window.firebaseLoadHistory
     loadHistory: async function() {
         try {
-            console.log('Attempting to load history from Cloudflare...');
+            console.log('Attempting to load history from Cloudflare D1 + JWT...');
             const result = await SantrilogyBackend.getHistory();
-            console.log('History loaded from Cloudflare:', result);
+            console.log('History loaded from Cloudflare D1 + JWT:', result);
 
             // Konversi format respons ke format yang diharapkan oleh template
             return (result.history || []).map((item, index) => ({
@@ -387,11 +387,11 @@ var FirebaseReplacement = {
     // Ganti window.firebaseSaveSession
     saveSession: async function(sessionId, title, messages) {
         try {
-            console.log('Attempting to save session to Cloudflare:', {sessionId, title});
+            console.log('Attempting to save session to Cloudflare D1 + JWT:', {sessionId, title});
             const result = await SantrilogyBackend.sessionOp(
                 sessionId, null, 'save', {title, messages}
             );
-            console.log('Session saved to Cloudflare:', result);
+            console.log('Session saved to Cloudflare D1 + JWT:', result);
             return result.success === true;
         } catch (error) {
             console.error('Save session error:', error);
@@ -573,15 +573,15 @@ console.log('Santrilogy AI - Cloudflare D1 + JWT Authentication Integration Load
 console.log('Worker URL:', CLOUDFLARE_AUTH_CONFIG.BASE_URL);
 
 // Export untuk digunakan oleh fungsi-fungsi di template
-// Simulasikan fungsi-fungsi firebase agar template tetap kompatibel
-window.firebaseLoadHistory = FirebaseReplacement.loadHistory;
-window.firebaseSaveSession = FirebaseReplacement.saveSession;
-window.firebaseLoadSession = FirebaseReplacement.loadSession;
-window.firebaseDeleteSession = FirebaseReplacement.deleteSession;
+// Simulasikan fungsi-fungsi Cloudflare D1 + JWT agar template tetap kompatibel
+window.firebaseLoadHistory = CloudflareD1Replacement.loadHistory;
+window.firebaseSaveSession = CloudflareD1Replacement.saveSession;
+window.firebaseLoadSession = CloudflareD1Replacement.loadSession;
+window.firebaseDeleteSession = CloudflareD1Replacement.deleteSession;
 
 // Pastikan semua fungsi autentikasi siap sebelum main.js menggunakannya
 function ensureAuthFunctionsAreReady() {
-    // Daftar fungsi autentikasi yang harus tersedia
+    // Daftar fungsi autentikasi Cloudflare D1 + JWT yang harus tersedia
     const requiredAuthFunctions = [
         'firebaseLoadHistory',
         'firebaseSaveSession',
@@ -660,7 +660,7 @@ function runAuthInitialization() {
     window.firebaseReady = true;
     console.log('Santrilogy AI: Authentication system ready');
 
-    // Tambahkan flag untuk mengetahui status autentikasi
+    // Tambahkan flag untuk mengetahui status Cloudflare D1 + JWT autentikasi
     window.authSystemStatus = {
         ready: true,
         timestamp: Date.now(),
@@ -790,10 +790,10 @@ setTimeout(function() {
 }, 1000);
 
 // Pastikan semua fungsi autentikasi ekspor juga tersedia sebagai fungsi utama
-window.firebaseLoadHistory = FirebaseReplacement.loadHistory;
-window.firebaseSaveSession = FirebaseReplacement.saveSession;
-window.firebaseLoadSession = FirebaseReplacement.loadSession;
-window.firebaseDeleteSession = FirebaseReplacement.deleteSession;
+window.firebaseLoadHistory = CloudflareD1Replacement.loadHistory;
+window.firebaseSaveSession = CloudflareD1Replacement.saveSession;
+window.firebaseLoadSession = CloudflareD1Replacement.loadSession;
+window.firebaseDeleteSession = CloudflareD1Replacement.deleteSession;
 
 // Tandai bahwa inisialisasi utama selesai
 window.mainAuthFunctionsInitialized = true;

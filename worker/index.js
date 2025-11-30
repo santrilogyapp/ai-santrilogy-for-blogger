@@ -8,14 +8,23 @@ export default {
     const url = new URL(request.url);
     
     // --- 1. CONFIG & CORS ---
-    const allowedOrigins = (env.ALLOWED_ORIGINS || '*').split(',');
+    const allowedOrigins = (env.ALLOWED_ORIGINS || 'https://santrilogy-ai.blogspot.com,https://www.santrilogy-ai.blogspot.com').split(',');
     const origin = request.headers.get('Origin');
-    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
+    // Only allow origins from the allowed list (prevent wildcard usage)
+    let allowOrigin = '*';
+    if (origin && allowedOrigins.some(allowed => allowed.trim() === origin)) {
+      allowOrigin = origin;
+    } else if (!origin && allowedOrigins.length > 0) {
+      // Fallback to first allowed origin for non-cors requests
+      allowOrigin = allowedOrigins[0].trim();
+    }
 
     const corsHeaders = {
-      'Access-Control-Allow-Origin': allowOrigin || '*',
+      'Access-Control-Allow-Origin': allowOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true', // Allow credentials to be sent
     };
 
     if (request.method === 'OPTIONS') {
@@ -65,7 +74,7 @@ export default {
 
     } catch (e) {
       console.error("Worker Error:", e);
-      return safeJSONResponse({ error: e.message || 'Internal Server Error' }, 500, corsHeaders);
+      return safeJSONResponse({ error: 'Internal Server Error' }, 500, corsHeaders);
     }
   }
 };
@@ -193,7 +202,7 @@ async function handleSmartChat(request, env, ctx, headers, userId) {
 
   } catch (error) {
     console.error("Smart Chat Error:", error);
-    return errorResp('AI Processing Error: ' + error.message, 500, headers);
+    return errorResp('AI Processing Error', 500, headers);
   }
 }
 
@@ -216,8 +225,19 @@ async function handleAdminInput(request, env) {
       id: id, values: data[0], metadata: { text, kitab, bab }
     }]);
 
-    return new Response(`✅ Tersimpan! ID: ${id}. <a href="/admin/input">Input Lagi</a>`, { 
-        headers: {'Content-Type': 'text/html'} 
+    // Sanitize the ID to prevent XSS
+    const sanitizedId = id.replace(/[<>'"&]/g, (match) => {
+      return {
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;',
+        '&': '&amp;'
+      }[match];
+    });
+
+    return new Response(`✅ Tersimpan! ID: ${sanitizedId}. <a href="/admin/input">Input Lagi</a>`, {
+        headers: {'Content-Type': 'text/html'}
     });
   }
 
@@ -255,14 +275,21 @@ async function handleRegister(request, env, headers) {
     let { email, password, name } = body;
     email = sanitizeString(email);
     if (!email || !password) return errorResp('Email & Pass required', 400, headers);
+
     const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
     if (existing) return errorResp('Email sudah terdaftar', 409, headers);
-    const result = await env.DB.prepare('INSERT INTO users (email, password_hash, name, provider) VALUES (?, ?, ?, ?)').bind(email, password, sanitizeString(name), 'email').run();
+
+    // Hash password sebelum disimpan
+    const passwordHash = await hashPassword(password);
+    const result = await env.DB.prepare('INSERT INTO users (email, password_hash, name, provider) VALUES (?, ?, ?, ?)').bind(email, passwordHash, sanitizeString(name), 'email').run();
     const userId = result.lastRowId;
     const token = await generateJWT({ userId, email }, env.JWT_SECRET);
     await env.DB.prepare('INSERT INTO user_preferences (user_id) VALUES (?)').bind(userId).run();
     return safeJSONResponse({ success: true, token, user: { id: userId, email, name } }, 200, headers);
-  } catch (e) { return errorResp(e.message, 500, headers); }
+  } catch (e) {
+    console.error("Registration error:", e);
+    return errorResp("Registration failed", 500, headers);
+  }
 }
 
 // -- LOGIN --
@@ -270,11 +297,16 @@ async function handleLogin(request, env, headers) {
   try {
     const body = await request.json();
     const user = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(body.email).first();
-    if (!user || user.password_hash !== body.password) return errorResp('Email atau password salah', 401, headers);
+    if (!user || !await verifyPassword(body.password, user.password_hash)) {
+      return errorResp('Email atau password salah', 401, headers);
+    }
     const token = await generateJWT({ userId: user.id, email: user.email }, env.JWT_SECRET);
     await env.DB.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').bind(user.id).run();
     return safeJSONResponse({ success: true, token, user: { id: user.id, email: user.email, name: user.name, provider: user.provider } }, 200, headers);
-  } catch (e) { return errorResp(e.message, 500, headers); }
+  } catch (e) {
+    console.error("Login error:", e);
+    return errorResp("Login failed", 500, headers);
+  }
 }
 
 // -- VERIFY --
@@ -344,31 +376,114 @@ async function saveToD1(env, userId, sessionId, userMsg, aiMsg) {
   await env.DB.prepare('INSERT INTO chat_history (user_id, session_id, user_message, ai_response) VALUES (?, ?, ?, ?)').bind(userId, sessionId, sanitizeString(userMsg), sanitizeString(aiMsg)).run();
 }
 
-function sanitizeString(str) { if (typeof str !== 'string') return str; return str.replace(/[\x00-\x1F\x7F]/g, '').replace(/'/g, "''"); }
+function sanitizeString(str) {
+  if (typeof str !== 'string') return str;
+
+  // Remove null bytes, control characters, and potential injection patterns
+  let sanitized = str.replace(/[\x00-\x1F\x7F]/g, '')
+                    .replace(/'/g, "''")
+                    .replace(/--/g, '') // SQL comment prevention
+                    .replace(/;/g, '') // SQL statement separator
+                    .replace(/\/\*/g, '') // SQL comment start
+                    .replace(/\*\//g, '') // SQL comment end
+                    .replace(/\b(ALTER|CREATE|DELETE|DROP|EXEC(UTE)?|INSERT( +INTO)?|MERGE|SELECT|UPDATE|UNION( +ALL)?|USE|TRUNCATE|GRANT|REVOKE|CALL|DECLARE)\b/gi, ''); // SQL keywords
+
+  // Limit length to prevent abuse
+  if (sanitized.length > 1000) {
+    sanitized = sanitized.substring(0, 1000);
+  }
+
+  return sanitized;
+}
 function safeJSONResponse(data, status = 200, headers = {}) { return new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } }); }
 function errorResp(msg, status, headers) { return safeJSONResponse({ error: msg }, status, headers); }
 function requiresAuth(path) { return path.startsWith('/api/') && path !== '/api/chat'; }
 
+// Password hashing functions
+async function hashPassword(password) {
+  // Create a salt and hash the password
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyPassword(password, hash) {
+  const testHash = await hashPassword(password);
+  return testHash === hash;
+}
+
 // JWT
 async function generateJWT(payload, secret) {
-  const head = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/=/g, '');
-  payload.exp = Math.floor(Date.now()/1000) + 86400;
-  const body = btoa(JSON.stringify(payload)).replace(/=/g, '');
-  const sign = await hmacSha256(`${head}.${body}`, secret);
-  return `${head}.${body}.${sign}`;
+  if (!secret) throw new Error('JWT secret is required');
+
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const headerBase64 = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+  // Set expiration time (24 hours from now)
+  const payloadWithExp = { ...payload,
+    exp: Math.floor(Date.now() / 1000) + 86400,
+    iat: Math.floor(Date.now() / 1000) // Add issued at timestamp
+  };
+
+  const payloadBase64 = btoa(JSON.stringify(payloadWithExp)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+  const signatureInput = `${headerBase64}.${payloadBase64}`;
+  const signature = await hmacSha256(signatureInput, secret);
+
+  return `${headerBase64}.${payloadBase64}.${signature}`;
 }
+
 async function verifyJWT(token, secret) {
-  const [h, b, s] = token.split('.');
-  if (!h || !b || !s) throw new Error('Invalid Token');
-  const validSign = await hmacSha256(`${h}.${b}`, secret);
-  if (s !== validSign) throw new Error('Invalid Signature');
-  return JSON.parse(atob(b));
+  if (!secret) throw new Error('JWT secret is required');
+  if (!token || typeof token !== 'string') throw new Error('Invalid token');
+
+  const parts = token.split('.');
+  if (parts.length !== 3) throw new Error('Invalid token format');
+
+  const [header, payload, signature] = parts;
+
+  // Verify signature by reconstructing it
+  const signatureInput = `${header}.${payload}`;
+  const expectedSignature = await hmacSha256(signatureInput, secret);
+
+  if (signature !== expectedSignature) throw new Error('Invalid signature');
+
+  // Decode and check expiration
+  try {
+    const payloadJson = atob(decodeURIComponent(escape(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))));
+    const payloadObj = JSON.parse(payloadJson);
+
+    const now = Math.floor(Date.now() / 1000);
+    if (payloadObj.exp && payloadObj.exp < now) {
+      throw new Error('Token expired');
+    }
+
+    return payloadObj;
+  } catch (e) {
+    throw new Error('Invalid token payload');
+  }
 }
+
 async function hmacSha256(msg, secret) {
+  if (!secret) throw new Error('Secret is required for HMAC');
+
   const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', enc.encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
   const sig = await crypto.subtle.sign('HMAC', key, enc.encode(msg));
-  return btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  // Convert signature to base64url format
+  return btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
 }
 async function authenticateRequest(req, env) {
   const h = req.headers.get('Authorization');

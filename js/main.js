@@ -1153,7 +1153,7 @@ function fetchAIResponse(text, imageBase64, mimeType) {
             var title = state.messages[0].content.substring(0, 35);
             if (state.messages[0].content.length > 35) title += '...';
 
-            // Simpan ke Firestore (async, tidak blocking)
+            // Simpan ke Cloudflare D1 + JWT (async, tidak blocking)
             if (typeof window.firebaseSaveSession === 'function') {
                 window.firebaseSaveSession(state.sessionId, title, state.messages);
             }
@@ -1196,18 +1196,18 @@ function fetchAIResponse(text, imageBase64, mimeType) {
         }
 
         // ========== LOAD HISTORY ==========
-        function loadHistoryFromFirestore() {
-            // Jika fungsi firebase belum siap (karena delay network), coba lagi dalam 500ms
+        function loadHistoryFromCloudflareD1() {
+            // Jika fungsi Cloudflare D1 + JWT belum siap (karena delay network), coba lagi dalam 500ms
             if (typeof window.firebaseLoadHistory !== 'function') {
-                console.log("Menunggu Firebase...");
-                setTimeout(loadHistoryFromFirestore, 500);
+                console.log("Menunggu Cloudflare D1 + JWT...");
+                setTimeout(loadHistoryFromCloudflareD1, 500);
                 return;
             }
 
             // Tampilkan Loading Skeleton
             elements.historyList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-tertiary);font-size:0.85rem">Memuat data...</div>';
 
-            // Panggil fungsi Global Firebase
+            // Panggil fungsi Global Cloudflare D1 + JWT
             window.firebaseLoadHistory().then(function(history) {
                 renderHistoryList(history);
             }).catch(function(e) {
@@ -1506,7 +1506,7 @@ function fetchAIResponse(text, imageBase64, mimeType) {
                             startNewChat();
                         }
 
-                        loadHistoryFromFirestore();
+                        loadHistoryFromCloudflareD1();
                         showToast('Riwayat dihapus', 'success');
                     }
                 });
@@ -1519,7 +1519,7 @@ function fetchAIResponse(text, imageBase64, mimeType) {
             showToast: showToast,
             closeModal: closeModal,
             loadChatHistory: loadChatHistory,
-            loadHistoryFromFirestore: loadHistoryFromFirestore, // <-- TAMBAH
+            loadHistoryFromCloudflareD1: loadHistoryFromCloudflareD1, // <-- TAMBAH
             triggerDonation: triggerDonation,
             loadSession: loadSession,
             deleteSession: deleteSession,
@@ -1657,10 +1657,10 @@ function fetchAIResponse(text, imageBase64, mimeType) {
 
         // ========== FIRESTORE INTEGRATION ==========
 
-        function loadHistoryFromFirestore() {
-            // Cek apakah fungsi Firebase sudah siap
+        function loadHistoryFromCloudflareD1() {
+            // Cek apakah fungsi Cloudflare D1 + JWT sudah siap
             if (typeof window.firebaseLoadHistory !== 'function') {
-                console.log("Firebase not ready, fallback to local");
+                console.log("Cloudflare D1 + JWT not ready, fallback to local");
                 loadChatHistory(); // Fallback ke localStorage
                 return;
             }
@@ -1670,7 +1670,7 @@ function fetchAIResponse(text, imageBase64, mimeType) {
                 elements.historyList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-tertiary);font-size:0.85rem">Memuat data...</div>';
             }
 
-            // Panggil fungsi Firebase
+            // Panggil fungsi Cloudflare D1 + JWT
             window.firebaseLoadHistory().then(function(history) {
                 renderHistoryList(history);
             }).catch(function(e) {
@@ -1849,7 +1849,7 @@ function fetchAIResponse(text, imageBase64, mimeType) {
             state: state,
 
             // PENTING: Baris ini yang memperbaiki error tersebut
-            loadHistoryFromFirestore: loadHistoryFromFirestore
+            loadHistoryFromCloudflareD1: loadHistoryFromCloudflareD1
         };
 
         // Initialize

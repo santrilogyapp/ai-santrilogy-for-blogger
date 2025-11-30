@@ -69,10 +69,8 @@ Hapus atau komen skrip berikut dari template XML Anda:
 ```xml
 <!-- HAPUS ATAU KOMENTARI SKRIP INI -->
 <!--
-<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'/>
-<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js'/>
-<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js'/>
-<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/firebase.js'/>
+<!-- Tidak ada lagi SDK Firebase -->
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/worker-integration.js'/>
 -->
 ```
 

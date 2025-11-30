@@ -9,17 +9,14 @@ Setelah file JavaScript dipindahkan ke GitHub, Anda bisa menggunakan CDN untuk m
 Ganti blok JavaScript di template Blogger Anda dengan skrip berikut (urutan penting!):
 
 ```html
-<!-- External Libraries - Load Firebase SDK first -->
-<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'/>
-<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js'/>
-<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js'/>
+<!-- External Libraries - No more Firebase SDK needed -->
 <script src='https://cdn.jsdelivr.net/npm/marked/marked.min.js'/>
 <script src='https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js'/>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js'/>
 
 <!-- Main Application Scripts -->
 <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/main.js'/>
-<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/firebase.js'/>
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/worker-integration.js'/>
 <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/utils.js'/>
 ```
 
@@ -48,17 +45,17 @@ Jika Anda menggunakan GitHub Pages, file akan tersedia di:
 
 Sebelum menggunakan template ini di produksi, pastikan untuk:
 
-1. Ganti Firebase config di `firebase.js` dengan konfigurasi Anda sendiri
-2. Gunakan Firebase Security Rules yang ketat
+1. Konfigurasi Cloudflare D1 + JWT di `worker-integration.js` sesuai dengan lingkungan Anda
+2. Atur Cloudflare Worker Security Rules yang ketat
 3. Jangan tampilkan API keys sensitif di kode client-side
 
 ## Struktur Direktori
 
 ```
 js/
-├── main.js          # Fungsi utama aplikasi
-├── firebase.js      # Konfigurasi dan fungsi Firebase
-└── utils.js         # Fungsi utilitas umum
+├── main.js              # Fungsi utama aplikasi
+├── worker-integration.js # Integrasi Cloudflare D1 + JWT sebagai pengganti Firebase
+└── utils.js             # Fungsi utilitas umum
 ```
 
 ## Memperbarui File JS

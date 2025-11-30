@@ -13,12 +13,12 @@
       ]
     },
     {
-      "name": "js/firebase.js", 
-      "description": "Konfigurasi dan fungsi Firebase untuk otentikasi dan penyimpanan riwayat chat",
+      "name": "js/worker-integration.js",
+      "description": "Integrasi Cloudflare D1 + JWT untuk otentikasi dan penyimpanan riwayat chat",
       "dependencies": [
-        "firebase-app",
-        "firebase-auth", 
-        "firebase-firestore"
+        "marked",
+        "mermaid",
+        "highlight.js"
       ]
     },
     {
@@ -47,7 +47,7 @@
   "bloggerIntegration": {
     "cdnLinks": [
       "https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/main.js",
-      "https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/firebase.js",
+      "https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/worker-integration.js",
       "https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v1.0.0/js/utils.js"
     ],
     "requiredElements": [
@@ -61,8 +61,8 @@
     ]
   },
   "securityNotes": [
-    "Ganti API keys Firebase dengan yang aman saat deployment",
-    "Gunakan Firebase Security Rules yang ketat",
+    "Konfigurasi Cloudflare D1 + JWT dengan benar saat deployment",
+    "Gunakan Cloudflare Worker Security Rules yang ketat",
     "Jangan simpan konfigurasi sensitif di client-side"
   ]
 }
