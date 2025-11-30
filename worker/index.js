@@ -12,11 +12,16 @@ export default {
     const origin = request.headers.get('Origin');
 
     // Only allow origins from the allowed list (prevent wildcard usage)
-    let allowOrigin = '*';
+    let allowOrigin = null; // Default to no origin allowed
     if (origin && allowedOrigins.some(allowed => allowed.trim() === origin)) {
       allowOrigin = origin;
     } else if (!origin && allowedOrigins.length > 0) {
       // Fallback to first allowed origin for non-cors requests
+      allowOrigin = allowedOrigins[0].trim();
+    }
+
+    // If no valid origin found, use the first allowed origin as default
+    if (!allowOrigin) {
       allowOrigin = allowedOrigins[0].trim();
     }
 
