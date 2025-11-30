@@ -1,8 +1,8 @@
 {
   "name": "santrilogy-ai-worker",
   "version": "2.0.0",
-  "description": "Secure backend worker for Santrilogy AI application",
-  "main": "worker/worker-fixed.js",
+  "description": "Secure backend worker for Santrilogy AI application with D1 + JWT authentication",
+  "main": "worker/index.js",
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
@@ -11,10 +11,11 @@
   "keywords": [
     "cloudflare",
     "workers",
+    "d1",
+    "jwt",
     "ai",
     "chat",
-    "authentication",
-    "firebase"
+    "authentication"
   ],
   "author": "Santrilogy AI Team",
   "license": "MIT",

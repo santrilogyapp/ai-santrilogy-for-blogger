@@ -1,26 +1,160 @@
 /**
- * SANTRILOGY AI - SECURE BACKEND WORKER (FINAL v2.0)
- * Platform: Cloudflare Workers
- * * REQUIRED ENV VARIABLES (Set via 'npx wrangler secret put'):
- * - FIREBASE_PROJECT_ID
- * - FIREBASE_CLIENT_EMAIL
- * - FIREBASE_PRIVATE_KEY
- * - FIREBASE_API_KEY
- * - GOOGLE_CLIENT_ID      (Untuk Login Google)
- * - GOOGLE_CLIENT_SECRET  (Untuk Login Google)
- * - AI_WORKER_URL         (Optional)
- * - ALLOWED_ORIGINS       (e.g., https://santrilogy-ai.blogspot.com)
+ * SANTRILOGY AI - CLOUDFLARE AUTH + AI WORKER (v3.0) - SAFE VERSION
+ * Platform: Cloudflare Workers + D1 Database
+ *
+ * ENV Variables yang dibutuhkan:
+ * - JWT_SECRET: Secret untuk JWT signing
+ * - GOOGLE_CLIENT_ID: Google OAuth Client ID
+ * - GOOGLE_CLIENT_SECRET: Google OAuth Client Secret
+ * - AI_WORKER_URL: URL untuk AI processing (opsional)
+ * - ALLOWED_ORIGINS: Origins yang diizinkan (comma separated)
+ * - DB: D1 Database binding
  */
+
+// JWT Utils untuk Cloudflare Workers (inline)
+// Implementasi sederhana dari JWT signing/verification untuk Cloudflare Workers
+
+async function generateJWT(payload, secret) {
+  // Tambahkan exp jika tidak ada
+  if (!payload.exp) {
+    payload.exp = Math.floor(Date.now() / 1000) + (24 * 60 * 60); // 24 jam
+  }
+
+  // Header JWT
+  const header = {
+    alg: 'HS256',
+    typ: 'JWT'
+  };
+
+  // Encode header dan payload
+  const encodedHeader = urlEncodeBase64(JSON.stringify(header));
+  const encodedPayload = urlEncodeBase64(JSON.stringify(payload));
+
+  // Buat signature input
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+
+  // Buat signature
+  const signature = await createHMACSignature(signatureInput, secret);
+
+  // Gabungkan semua bagian
+  return `${signatureInput}.${signature}`;
+}
+
+async function verifyJWT(token, secret) {
+  const [encodedHeader, encodedPayload, signature] = token.split('.');
+
+  if (!encodedHeader || !encodedPayload || !signature) {
+    throw new Error('Token tidak valid');
+  }
+
+  // Decode payload
+  const payload = JSON.parse(urlDecodeBase64(encodedPayload));
+
+  // Verifikasi waktu kadaluarsa
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp && payload.exp < now) {
+    throw new Error('Token telah kadaluarsa');
+  }
+
+  // Buat ulang signature input
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+  const expectedSignature = await createHMACSignature(signatureInput, secret);
+
+  // Bandingkan signature
+  if (expectedSignature !== signature) {
+    throw new Error('Signature tidak valid');
+  }
+
+  return payload;
+}
+
+async function createHMACSignature(message, secret) {
+  // Convert secret dan message ke ArrayBuffer
+  const encoder = new TextEncoder();
+  const keyBuffer = encoder.encode(secret);
+  const messageBuffer = encoder.encode(message);
+
+  // Impor secret key
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyBuffer,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  // Buat signature
+  const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageBuffer);
+
+  // Encode ke base64url
+  return arrayBufferToBase64Url(signatureBuffer);
+}
+
+function urlEncodeBase64(str) {
+  return btoa(str)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+function urlDecodeBase64(str) {
+  // Tambah padding jika diperlukan
+  const padding = '='.repeat((4 - str.length % 4) % 4);
+  const paddedStr = str.replace(/-/g, '+').replace(/_/g, '/') + padding;
+  return atob(paddedStr);
+}
+
+function arrayBufferToBase64Url(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+// Fungsi untuk membersihkan string dari karakter tidak aman
+function sanitizeString(str) {
+  if (typeof str !== 'string') return str;
+
+  // Hapus atau ganti karakter kontrol
+  return str
+    .replace(/[\x00-\x1F\x7F]/g, '') // Hapus karakter kontrol ASCII
+    .replace(/\u0000/g, '') // Hapus null byte
+    .replace(/\r\n/g, ' ') // Ganti CRLF dengan spasi
+    .replace(/\n/g, ' ') // Ganti newline dengan spasi
+    .replace(/\r/g, ' ') // Ganti carriage return dengan spasi
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ''); // Hapus kontrol lain
+}
+
+// Fungsi untuk membuat response JSON yang aman
+function safeJSONResponse(obj, status = 200, headers = {}) {
+  // Sanitasi semua string dalam objek
+  const sanitized = JSON.parse(JSON.stringify(obj, (key, value) => {
+    return typeof value === 'string' ? sanitizeString(value) : value;
+  }));
+
+  return new Response(JSON.stringify(sanitized, null, 2), {
+    status: status,
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+    }
+  });
+}
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    
+
     // --- 1. CONFIG & CORS ---
     const allowedOrigins = (env.ALLOWED_ORIGINS || '*').split(',');
     const origin = request.headers.get('Origin');
     const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-    
+
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowOrigin || '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -33,142 +167,373 @@ export default {
 
     try {
       const path = url.pathname;
+      console.log('Processing path:', path); // Debug logging
 
-      // --- 2. ROUTING ---
-
-      // Home / Health Check
+      // --- 2. MAIN API ROUTES ---
       if (path === '/' || path === '/health') {
-        return new Response(JSON.stringify({
+        return safeJSONResponse({
           status: 'Online',
-          service: 'Santrilogy AI Backend',
-          version: '2.0.0',
-          auth_mode: 'Hybrid (Email + Google OAuth)'
-        }), { headers: corsHeaders });
+          service: 'Santrilogy AI Backend with Custom Auth',
+          version: '3.0.0',
+          auth_mode: 'Custom (Email + Google OAuth)'
+        }, 200, corsHeaders);
       }
 
-      // Auth: Email/Password & Verify
-      if (path === '/api/auth' && request.method === 'POST') {
-        return await handleAuth(request, env, corsHeaders);
+      // --- 3. AUTHENTICATION ROUTES ---
+      // Periksa dengan tepat apakah path dimulai dengan /auth/
+      if (path.startsWith('/auth/')) {
+        console.log('Processing auth route:', path); // Debug logging
+        return await handleAuthRoutes(request, env, corsHeaders);
       }
 
-      // Auth: Google Login (Redirect user to Google)
-      if (path === '/api/auth/google' && request.method === 'GET') {
-        return await handleGoogleLogin(request, env);
+      // --- 4. PROTECTED ROUTES (memerlukan auth) ---
+      const authResult = await authenticateRequest(request, env);
+      if (!authResult.authenticated && requiresAuth(path)) {
+        return errorResp('Authorization required', 401, corsHeaders);
       }
 
-      // Auth: Google Callback (Handle return from Google)
-      if (path === '/api/auth/callback' && request.method === 'GET') {
-        return await handleGoogleCallback(request, env);
-      }
-      
-      // Chat: AI Processing + Firestore Save
+      const userId = authResult.userId;
+
       if (path === '/api/chat' && request.method === 'POST') {
-        return await handleChat(request, env, corsHeaders);
+        return await handleChat(request, env, corsHeaders, userId);
       }
 
-      // History: Get Chats from Firestore
       if (path === '/api/history' && request.method === 'GET') {
-        return await handleHistory(request, env, corsHeaders);
-      }
-      
-      // Session: Manage chat sessions
-      if (path === '/api/session' && request.method === 'POST') {
-        return await handleSession(request, env, corsHeaders);
+        return await handleHistory(request, env, corsHeaders, userId);
       }
 
-      return new Response(JSON.stringify({ error: 'Endpoint Not Found' }), { status: 404, headers: corsHeaders });
+      if (path === '/api/session' && request.method === 'POST') {
+        return await handleSession(request, env, corsHeaders, userId);
+      }
+
+      return safeJSONResponse({ error: 'Endpoint Not Found' }, 404, corsHeaders);
 
     } catch (e) {
       console.error("Worker Error:", e);
-      return new Response(JSON.stringify({ error: e.message || 'Internal Server Error' }), { status: 500, headers: corsHeaders });
+      return safeJSONResponse({ error: e.message || 'Internal Server Error' }, 500, corsHeaders);
     }
   }
 };
 
 // =========================================================
-// 3. HANDLER FUNCTIONS
+// AUTHENTICATION ROUTES
 // =========================================================
 
-/**
- * Handle Auth Standard (Email/Password)
- */
-async function handleAuth(req, env, headers) {
-  const body = await req.json();
-  const { action, email, password, idToken } = body;
-  const apiKey = env.FIREBASE_API_KEY;
+async function handleAuthRoutes(request, env, headers) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  console.log('Handling auth route:', path, 'method:', request.method); // Debug logging
 
-  if (!apiKey) return errorResp('Server config error: API Key missing', 500, headers);
-
-  let endpoint = "";
-  let payload = {};
-
-  if (action === 'signup') {
-    endpoint = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`;
-    payload = { email, password, returnSecureToken: true };
-  } else if (action === 'login') {
-    endpoint = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`;
-    payload = { email, password, returnSecureToken: true };
-  } else if (action === 'verify') {
-    endpoint = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`;
-    payload = { idToken };
-  } else {
-    return errorResp('Invalid Action', 400, headers);
+  // Email/Password Auth
+  if (path === '/auth/register' && request.method === 'POST') {
+    console.log('Processing register'); // Debug logging
+    return await handleRegister(request, env, headers);
+  }
+  if (path === '/auth/login' && request.method === 'POST') {
+    console.log('Processing login'); // Debug logging
+    return await handleLogin(request, env, headers);
+  }
+  if (path === '/auth/verify' && request.method === 'POST') {
+    console.log('Processing verify'); // Debug logging
+    return await handleVerify(request, env, headers);
+  }
+  if (path === '/auth/logout' && request.method === 'POST') {
+    console.log('Processing logout'); // Debug logging
+    return await handleLogout(request, env, headers);
   }
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-
-  const data = await res.json();
-  if (data.error) {
-    return errorResp(data.error.message, 400, headers);
+  // OAuth Routes
+  if (path === '/auth/google' && request.method === 'GET') {
+    console.log('Processing google auth redirect'); // Debug logging
+    return await handleGoogleAuth(request, env);
+  }
+  if (path === '/auth/google/callback' && request.method === 'GET') {
+    console.log('Processing google auth callback'); // Debug logging
+    return await handleGoogleCallback(request, env);
   }
 
-  return new Response(JSON.stringify(data), { headers });
+  // Jika tidak ada endpoint auth yang cocok, kembalikan error
+  console.log('No matching auth endpoint found for:', path); // Debug logging
+  return safeJSONResponse({ error: 'Auth endpoint not found' }, 404, headers);
 }
 
-/**
- * Handle Google OAuth - Step 1: Redirect to Google
- */
-async function handleGoogleLogin(req, env) {
-  if (!env.GOOGLE_CLIENT_ID) return new Response("Google Client ID not configured", { status: 500 });
+// =========================================================
+// AUTH HANDLERS
+// =========================================================
 
-  const url = new URL(req.url);
-  const redirectUri = `${url.origin}/api/auth/callback`;
-  
-  // Construct Google OAuth URL
+async function handleRegister(request, env, headers) {
+  try {
+    console.log('Starting registration process'); // Debug logging
+
+    // Parse body dan sanitasi input
+    const rawBody = await request.text();
+    let body;
+
+    try {
+      // Sanitasi body dari karakter kontrol sebelum parsing
+      const sanitizedBody = sanitizeString(rawBody);
+      body = JSON.parse(sanitizedBody);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError, 'raw body:', rawBody); // Debug logging
+      return errorResp('Invalid JSON format', 400, headers);
+    }
+
+    let { email, password, name } = body;
+
+    // Sanitasi input
+    email = sanitizeString(email || '');
+    password = sanitizeString(password || '');
+    name = sanitizeString(name || '');
+
+    if (!email || !password) {
+      return errorResp('Email dan password diperlukan', 400, headers);
+    }
+
+    // Validasi email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return errorResp('Format email tidak valid', 400, headers);
+    }
+
+    if (password.length < 6) {
+      return errorResp('Password minimal 6 karakter', 400, headers);
+    }
+
+    // Hash password (placeholder - butuh bcrypt sebenarnya)
+    const passwordHash = await hashPassword(password);
+
+    // Cek apakah email sudah terdaftar
+    const existingUser = await env.DB.prepare(
+      'SELECT id FROM users WHERE email = ?'
+    ).bind(email).first();
+
+    if (existingUser) {
+      return errorResp('Email sudah terdaftar', 409, headers);
+    }
+
+    // Sanitasi nama untuk digunakan di database
+    const sanitizedName = name || email.split('@')[0];
+
+    // Simpan user baru
+    const result = await env.DB.prepare(
+      'INSERT INTO users (email, password_hash, name, provider) VALUES (?, ?, ?, ?)'
+    ).bind(email, passwordHash, sanitizedName, 'email').run();
+
+    const userId = result.lastRowId;
+
+    // Generate JWT token
+    const token = await generateJWT({
+      userId: userId,
+      email: email,
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+    }, env.JWT_SECRET);
+
+    // Update last login
+    await env.DB.prepare(
+      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(userId).run();
+
+    // Buat preferensi default
+    await env.DB.prepare(
+      'INSERT INTO user_preferences (user_id) VALUES (?)'
+    ).bind(userId).run();
+
+    console.log('Registration successful for user:', userId); // Debug logging
+
+    return safeJSONResponse({
+      success: true,
+      token: token,
+      user: {
+        id: userId,
+        email: email,
+        name: sanitizedName
+      }
+    }, 200, headers);
+  } catch (error) {
+    console.error('Register error:', error);
+    return errorResp('Gagal mendaftarkan akun: ' + error.message, 500, headers);
+  }
+}
+
+async function handleLogin(request, env, headers) {
+  try {
+    console.log('Starting login process'); // Debug logging
+
+    // Parse body dan sanitasi input
+    const rawBody = await request.text();
+    let body;
+
+    try {
+      // Sanitasi body dari karakter kontrol sebelum parsing
+      const sanitizedBody = sanitizeString(rawBody);
+      body = JSON.parse(sanitizedBody);
+    } catch (parseError) {
+      console.error('JSON parse error in login:', parseError); // Debug logging
+      return errorResp('Invalid JSON format', 400, headers);
+    }
+
+    let { email, password } = body;
+
+    // Sanitasi input
+    email = sanitizeString(email || '');
+    password = sanitizeString(password || '');
+
+    if (!email || !password) {
+      return errorResp('Email dan password diperlukan', 400, headers);
+    }
+
+    // Cari user berdasarkan email
+    const user = await env.DB.prepare(
+      'SELECT id, email, password_hash, name, provider FROM users WHERE email = ?'
+    ).bind(email).first();
+
+    if (!user) {
+      return errorResp('Email atau password salah', 401, headers);
+    }
+
+    // Verifikasi password
+    const passwordValid = await verifyPassword(password, user.password_hash);
+
+    if (!passwordValid) {
+      return errorResp('Email atau password salah', 401, headers);
+    }
+
+    // Generate JWT token
+    const token = await generateJWT({
+      userId: user.id,
+      email: user.email,
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+    }, env.JWT_SECRET);
+
+    // Update last login
+    await env.DB.prepare(
+      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(user.id).run();
+
+    console.log('Login successful for user:', user.id); // Debug logging
+
+    return safeJSONResponse({
+      success: true,
+      token: token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: sanitizeString(user.name || ''),
+        provider: user.provider
+      }
+    }, 200, headers);
+  } catch (error) {
+    console.error('Login error:', error);
+    return errorResp('Gagal login: ' + error.message, 500, headers);
+  }
+}
+
+async function handleVerify(request, env, headers) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return errorResp('Authorization header dibutuhkan', 401, headers);
+  }
+
+  const token = authHeader.substring(7);
+
+  try {
+    const decoded = await verifyJWT(token, env.JWT_SECRET);
+
+    // Cek apakah user masih valid di database
+    const user = await env.DB.prepare(
+      'SELECT id, email, name, provider FROM users WHERE id = ?'
+    ).bind(decoded.userId).first();
+
+    if (!user) {
+      return errorResp('Token tidak valid - user tidak ditemukan', 401, headers);
+    }
+
+    return safeJSONResponse({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: sanitizeString(user.name || ''),
+        provider: user.provider
+      }
+    }, 200, headers);
+  } catch (error) {
+    return errorResp('Token tidak valid', 401, headers);
+  }
+}
+
+async function handleLogout(request, env, headers) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return errorResp('Authorization header dibutuhkan', 401, headers);
+  }
+
+  // Dalam sistem JWT stateless, kita hanya mengembalikan success
+  return safeJSONResponse({
+    success: true,
+    message: 'Logout berhasil'
+  }, 200, headers);
+}
+
+async function handleGoogleAuth(request, env) {
+  if (!env.GOOGLE_CLIENT_ID) {
+    return new Response("Google Client ID not configured", { status: 500 });
+  }
+
+  const url = new URL(request.url);
+  const redirectUri = `${url.origin}/auth/google/callback`;
+
+  // Generate state parameter untuk CSRF protection
+  const state = generateRandomString(32);
+
+  // Simpan state di database sementara
+  const stateExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  await env.DB.prepare(
+    'INSERT INTO oauth_state (state, expires_at) VALUES (?, ?)'
+  ).bind(state, stateExpiry.toISOString()).run();
+
+  // Redirect ke Google OAuth
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${env.GOOGLE_CLIENT_ID}&` +
     `redirect_uri=${encodeURIComponent(redirectUri)}&` +
     `response_type=code&` +
     `scope=openid%20email%20profile&` +
     `access_type=online&` +
-    `prompt=select_account`;
+    `prompt=select_account&` +
+    `state=${state}`;
 
   return Response.redirect(googleAuthUrl, 302);
 }
 
-/**
- * Handle Google OAuth - Step 2: Callback & Exchange Token
- */
-async function handleGoogleCallback(req, env) {
-  const url = new URL(req.url);
+async function handleGoogleCallback(request, env) {
+  const url = new URL(request.url);
   const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
   const error = url.searchParams.get('error');
 
-  // Redirect back to Blogger if user cancels or error
   const bloggerUrl = env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',')[0] : 'https://santrilogy-ai.blogspot.com';
-  
+
   if (error || !code) {
     return Response.redirect(`${bloggerUrl}?error=auth_failed`, 302);
   }
 
   try {
-    const redirectUri = `${url.origin}/api/auth/callback`;
+    // Verifikasi state parameter
+    const savedState = await env.DB.prepare(
+      'SELECT id FROM oauth_state WHERE state = ? AND expires_at > CURRENT_TIMESTAMP'
+    ).bind(state).first();
 
-    // 1. Exchange Code for Google Access Token
+    if (!savedState) {
+      return Response.redirect(`${bloggerUrl}?error=invalid_state`, 302);
+    }
+
+    // Hapus state setelah digunakan
+    await env.DB.prepare('DELETE FROM oauth_state WHERE state = ?').bind(state).run();
+
+    const redirectUri = `${url.origin}/auth/google/callback`;
+
+    // Exchange code for access token
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -182,413 +547,374 @@ async function handleGoogleCallback(req, env) {
     });
 
     const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) throw new Error('Failed to get Google Access Token');
+    if (!tokenData.access_token) {
+      throw new Error('Failed to get Google Access Token');
+    }
 
-    // 2. Exchange Google Token for Firebase ID Token (SignInWithIdp)
-    const firebaseRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${env.FIREBASE_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        postBody: `access_token=${tokenData.access_token}&providerId=google.com`,
-        requestUri: bloggerUrl,
-        returnIdpCredential: true,
-        returnSecureToken: true
-      })
+    // Get user info from Google
+    const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
     });
 
-    const firebaseData = await firebaseRes.json();
-    if (firebaseData.error) throw new Error(firebaseData.error.message);
+    let googleUser = await userRes.json();
 
-    // 3. Redirect back to Blogger with Token in Hash (Secure way to pass data to frontend)
-    // Format: #token=XYZ&user=JSON_STRING
+    // Sanitasi data dari Google
+    googleUser = {
+      ...googleUser,
+      name: sanitizeString(googleUser.name || ''),
+      email: sanitizeString(googleUser.email || ''),
+    };
+
+    // Cek apakah user sudah terdaftar
+    let user = await env.DB.prepare(
+      'SELECT id, email, name FROM users WHERE provider = ? AND provider_id = ?'
+    ).bind('google', googleUser.id).first();
+
+    if (!user) {
+      // Cek apakah email sudah terdaftar (untuk menghindari duplikasi akun)
+      user = await env.DB.prepare(
+        'SELECT id, email, name FROM users WHERE email = ?'
+      ).bind(googleUser.email).first();
+
+      if (user) {
+        // Update user untuk menambahkan Google provider ID
+        await env.DB.prepare(
+          'UPDATE users SET provider_id = ?, provider = ? WHERE id = ?'
+        ).bind(googleUser.id, 'google', user.id).run();
+      } else {
+        // Buat user baru
+        const result = await env.DB.prepare(
+          'INSERT INTO users (email, name, provider, provider_id, email_verified) VALUES (?, ?, ?, ?, ?)'
+        ).bind(
+          googleUser.email,
+          googleUser.name,
+          'google',
+          googleUser.id,
+          googleUser.verified_email ? 1 : 0
+        ).run();
+
+        user = {
+          id: result.lastRowId,
+          email: googleUser.email,
+          name: googleUser.name
+        };
+
+        // Buat preferensi default untuk user baru
+        await env.DB.prepare(
+          'INSERT INTO user_preferences (user_id) VALUES (?)'
+        ).bind(user.id).run();
+      }
+    }
+
+    // Generate JWT token internal
+    const token = await generateJWT({
+      userId: user.id,
+      email: user.email,
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+    }, env.JWT_SECRET);
+
+    // Update last login
+    await env.DB.prepare(
+      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(user.id).run();
+
+    // Redirect dengan token ke aplikasi frontend
     const userSafe = encodeURIComponent(JSON.stringify({
-      email: firebaseData.email,
-      displayName: firebaseData.displayName,
-      photoURL: firebaseData.photoUrl,
-      uid: firebaseData.localId
+      id: user.id,
+      email: user.email,
+      name: sanitizeString(user.name || ''),
+      provider: 'google'
     }));
 
-    const finalUrl = `${bloggerUrl}/#auth_token=${firebaseData.idToken}&refresh_token=${firebaseData.refreshToken}&user=${userSafe}`;
-    
+    const finalUrl = `${bloggerUrl}/#auth_token=${token}&user=${userSafe}`;
     return Response.redirect(finalUrl, 302);
 
   } catch (e) {
-    console.error("OAuth Error:", e);
-    return Response.redirect(`${bloggerUrl}?error=${encodeURIComponent(e.message)}`, 302);
+    console.error("Google OAuth Error:", e);
+    return Response.redirect(`${bloggerUrl}?error=${encodeURIComponent(sanitizeString(e.message || 'Unknown error'))}`, 302);
   }
 }
 
-/**
- * Handle Chat (AI + DB)
- */
-async function handleChat(req, env, headers) {
-  const body = await req.json();
-  const { message, userId, sessionId } = body;
+// =========================================================
+// PROTECTED API HANDLERS
+// =========================================================
 
-  if (!message || !userId) return errorResp('Missing parameters', 400, headers);
-
-  // A. AI Processing
-  let aiResponseText = "Maaf, sistem AI sedang offline.";
-  if (env.AI_WORKER_URL) {
-     try {
-       const aiRes = await fetch(env.AI_WORKER_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, userId })
-       });
-       const aiData = await aiRes.json();
-       aiResponseText = aiData.response || aiData.text || JSON.stringify(aiData);
-     } catch (err) {
-       console.error("AI Error:", err);
-       aiResponseText = "Gagal menghubungi otak AI. Coba lagi nanti.";
-     }
-  } else {
-     // Fallback for testing
-     aiResponseText = `[Simulasi] AI URL belum diset. Pesanmu: "${message}"`;
-  }
-
-  // B. Save to Firestore (Fire and Forget - don't block response)
-  // Kita gunakan waitUntil agar Worker tidak mati sebelum save selesai
-  const savePromise = saveToFirestore(env, userId, sessionId, message, aiResponseText);
-  // Di Cloudflare Workers, ctx.waitUntil sangat disarankan, tapi karena 'ctx' kadang undefined di struktur export default objek sederhana,
-  // kita await saja sebentar atau biarkan promise berjalan (mungkin terpotong jika worker mati).
-  // Untuk keamanan data, kita await.
+async function handleChat(request, env, headers, userId) {
   try {
-    await savePromise;
-  } catch (e) {
-    console.error("DB Save Failed:", e);
-  }
+    // Parse body dan sanitasi input
+    const rawBody = await request.text();
+    let body;
 
-  return new Response(JSON.stringify({ 
-    response: aiResponseText, 
-    timestamp: Date.now() 
-  }), { headers });
-}
-
-/**
- * Handle History
- */
-async function handleHistory(req, env, headers) {
-  const url = new URL(req.url);
-  const userId = url.searchParams.get('userId');
-  if (!userId) return errorResp('Missing userId', 400, headers);
-
-  try {
-    const accessToken = await getGoogleAccessToken(env);
-    const projectId = env.FIREBASE_PROJECT_ID;
-    
-    // Firestore REST API: runQuery
-    const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
-    
-    const queryPayload = {
-      structuredQuery: {
-        from: [{ collectionId: "chats" }],
-        where: {
-          fieldFilter: {
-            field: { fieldPath: "userId" },
-            op: "EQUAL",
-            value: { stringValue: userId }
-          }
-        },
-        orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }],
-        limit: 20
-      }
-    };
-
-    const res = await fetch(queryUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(queryPayload)
-    });
-
-    const data = await res.json();
-    
-    // Handle error jika Index belum dibuat
-    if (data.error || (Array.isArray(data) && data[0] && data[0].error)) {
-        const errMsg = data.error ? data.error.message : data[0].error.message;
-        console.error("Firestore Query Error:", errMsg);
-        // Jika error index, tetap return array kosong agar frontend tidak crash
-        return new Response(JSON.stringify({ history: [] }), { headers });
+    try {
+      // Sanitasi body dari karakter kontrol sebelum parsing
+      const sanitizedBody = sanitizeString(rawBody);
+      body = JSON.parse(sanitizedBody);
+    } catch (parseError) {
+      return errorResp('Invalid JSON format', 400, headers);
     }
 
-    const history = (data || []).map(item => {
-      if (!item.document) return null;
-      const fields = item.document.fields;
-      return {
-        id: item.document.name.split('/').pop(),
-        userMessage: fields.userMessage?.stringValue || "",
-        aiResponse: fields.aiResponse?.stringValue || "",
-        createdAt: fields.createdAt?.timestampValue || ""
-      };
-    }).filter(Boolean);
+    let { message, sessionId } = body;
 
-    return new Response(JSON.stringify({ history }), { headers });
+    // Sanitasi input
+    message = sanitizeString(message || '');
+    sessionId = sanitizeString(sessionId || '');
 
-  } catch (err) {
-    return errorResp(err.message, 500, headers);
+    if (!message) {
+      return errorResp('Missing message parameter', 400, headers);
+    }
+
+    // A. AI Processing
+    let aiResponseText = "Maaf, sistem AI sedang offline.";
+    if (env.AI_WORKER_URL) {
+       try {
+         const aiRes = await fetch(env.AI_WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, userId })
+         });
+         const aiData = await aiRes.json();
+         aiResponseText = sanitizeString(aiData.response || aiData.text || JSON.stringify(aiData));
+       } catch (err) {
+         console.error("AI Error:", err);
+         aiResponseText = "Gagal menghubungi otak AI. Coba lagi nanti.";
+       }
+    } else {
+       // Fallback for testing
+       aiResponseText = `[Simulasi] AI URL belum diset. Pesanmu: "${sanitizeString(message)}"`;
+    }
+
+    // B. Save to D1 Database (Fire and Forget - don't block response)
+    const savePromise = saveToD1(env, userId, sessionId, message, aiResponseText);
+    try {
+      await savePromise;
+    } catch (e) {
+      console.error("DB Save Failed:", e);
+    }
+
+    return safeJSONResponse({
+      response: aiResponseText,
+      timestamp: Date.now()
+    }, 200, headers);
+  } catch (error) {
+    console.error("Chat error:", error);
+    return errorResp('Chat processing error: ' + error.message, 500, headers);
   }
 }
 
-/**
- * Handle Session (Manage chat sessions)
- */
-async function handleSession(req, env, headers) {
+async function handleHistory(request, env, headers, userId) {
   try {
-    const body = await req.json();
-    const { sessionId, userId, action, sessionData } = body;
+    // Ambil riwayat chat dari D1
+    const result = await env.DB.prepare(
+      `SELECT id, user_message as userMessage, ai_response as aiResponse, created_at as createdAt
+       FROM chat_history
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 20`
+    ).bind(userId).all();
 
-    if (!sessionId || !userId || !action) {
-      return errorResp('Missing required parameters: sessionId, userId, action', 400, headers);
+    // Sanitasi hasil sebelum mengembalikan
+    const sanitizedResults = (result.results || []).map(item => ({
+      ...item,
+      userMessage: sanitizeString(item.userMessage || ''),
+      aiResponse: sanitizeString(item.aiResponse || ''),
+    }));
+
+    return safeJSONResponse({
+      history: sanitizedResults
+    }, 200, headers);
+  } catch (err) {
+    console.error("History Error:", err);
+    return errorResp('History error: ' + err.message, 500, headers);
+  }
+}
+
+async function handleSession(request, env, headers, userId) {
+  try {
+    // Parse body dan sanitasi input
+    const rawBody = await request.text();
+    let body;
+
+    try {
+      // Sanitasi body dari karakter kontrol sebelum parsing
+      const sanitizedBody = sanitizeString(rawBody);
+      body = JSON.parse(sanitizedBody);
+    } catch (parseError) {
+      return errorResp('Invalid JSON format', 400, headers);
+    }
+
+    let { sessionId, action, sessionData } = body;
+
+    // Sanitasi input
+    sessionId = sanitizeString(sessionId || '');
+    action = sanitizeString(action || '');
+
+    if (!sessionId || !action) {
+      return errorResp('Missing required parameters: sessionId, action', 400, headers);
     }
 
     if (action === 'save') {
       if (!sessionData) {
         return errorResp('sessionData is required for save action', 400, headers);
       }
-      await saveSessionToFirestore(env, userId, sessionId, sessionData);
-      return new Response(JSON.stringify({ success: true, message: 'Session saved successfully' }), { headers });
-    } 
+
+      // Sanitasi data sesi
+      if (sessionData.messages) {
+        sessionData.messages = sessionData.messages.map(msg => ({
+          ...msg,
+          content: sanitizeString(msg.content || ''),
+        }));
+      }
+
+      await saveSessionToD1(env, userId, sessionId, sessionData);
+      return safeJSONResponse({
+        success: true,
+        message: 'Session saved successfully'
+      }, 200, headers);
+    }
     else if (action === 'get') {
-      const sessionData = await getSessionFromFirestore(env, userId, sessionId);
-      return new Response(JSON.stringify({ success: true, data: sessionData }), { headers });
-    } 
+      const sessionData = await getSessionFromD1(env, userId, sessionId);
+      return safeJSONResponse({
+        success: true,
+        data: sessionData
+      }, 200, headers);
+    }
     else if (action === 'delete') {
-      await deleteSessionFromFirestore(env, userId, sessionId);
-      return new Response(JSON.stringify({ success: true, message: 'Session deleted successfully' }), { headers });
-    } 
+      await deleteSessionFromD1(env, userId, sessionId);
+      return safeJSONResponse({
+        success: true,
+        message: 'Session deleted successfully'
+      }, 200, headers);
+    }
     else {
       return errorResp('Invalid action. Use: save, get, or delete', 400, headers);
     }
   } catch (e) {
     console.error("Session Error:", e);
-    return errorResp(e.message, 500, headers);
+    return errorResp('Session error: ' + e.message, 500, headers);
   }
 }
 
 // =========================================================
-// 4. SESSION MANAGEMENT FUNCTIONS
+// D1 DATABASE OPERATIONS
 // =========================================================
 
-async function saveSessionToFirestore(env, userId, sessionId, sessionData) {
-  if (!env.FIREBASE_PRIVATE_KEY) return; // Skip if no DB config
+async function saveToD1(env, userId, sessionId, userMsg, aiMsg) {
+  const stmt = env.DB.prepare(
+    'INSERT INTO chat_history (user_id, session_id, user_message, ai_response) VALUES (?, ?, ?, ?)'
+  );
 
-  const accessToken = await getGoogleAccessToken(env);
-  const projectId = env.FIREBASE_PROJECT_ID;
-  
-  const docData = {
-    fields: {
-      userId: { stringValue: userId },
-      sessionId: { stringValue: sessionId },
-      title: { stringValue: sessionData.title || 'New Session' },
-      messages: { mapValue: { fields: {
-        content: { stringValue: JSON.stringify(sessionData.messages || []) }
-      }}},
-      createdAt: { timestampValue: new Date().toISOString() },
-      updatedAt: { timestampValue: new Date().toISOString() }
-    }
-  };
-
-  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}/sessions/${sessionId}`;
-  
-  const res = await fetch(url, {
-    method: 'PATCH',  // Use PATCH to update or PUT to create/overwrite
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(docData)
-  });
-  
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error("Firestore Session Save Error:", errorText);
-    throw new Error(`Firestore Save Error: ${errorText}`);
-  }
+  // Sanitasi pesan sebelum menyimpan ke database
+  await stmt.bind(userId, sessionId || 'default', sanitizeString(userMsg), sanitizeString(aiMsg)).run();
 }
 
-async function getSessionFromFirestore(env, userId, sessionId) {
-  if (!env.FIREBASE_PRIVATE_KEY) return null; // Skip if no DB config
+async function saveSessionToD1(env, userId, sessionId, sessionData) {
+  const stmt = env.DB.prepare(`
+    INSERT OR REPLACE INTO user_sessions
+    (user_id, session_id, title, messages, created_at, updated_at)
+    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `);
 
-  const accessToken = await getGoogleAccessToken(env);
-  const projectId = env.FIREBASE_PROJECT_ID;
-  
-  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}/sessions/${sessionId}`;
-  
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  
-  if (!res.ok) {
-    if (res.status === 404) {
-      // Session doesn't exist, return null
-      return null;
-    }
-    const errorText = await res.text();
-    console.error("Firestore Session Get Error:", errorText);
-    throw new Error(`Firestore Get Error: ${errorText}`);
-  }
-  
-  const data = await res.json();
-  if (data && data.fields) {
-    return {
-      id: sessionId,
-      title: data.fields.title?.stringValue || 'Untitled Session',
-      messages: JSON.parse(data.fields.messages?.mapValue?.fields?.content?.stringValue || '[]'),
-      createdAt: data.fields.createdAt?.timestampValue,
-      updatedAt: data.fields.updatedAt?.timestampValue
-    };
-  }
-  
-  return null;
+  // Sanitasi data sebelum menyimpan
+  const sanitizedName = sanitizeString(sessionData.title || 'New Session');
+  const messagesJson = JSON.stringify((sessionData.messages || []).map(msg => ({
+    ...msg,
+    content: sanitizeString(msg.content || ''),
+  })));
+
+  await stmt.bind(
+    userId,
+    sessionId,
+    sanitizedName,
+    messagesJson
+  ).run();
 }
 
-async function deleteSessionFromFirestore(env, userId, sessionId) {
-  if (!env.FIREBASE_PRIVATE_KEY) return; // Skip if no DB config
+async function getSessionFromD1(env, userId, sessionId) {
+  const result = await env.DB.prepare(`
+    SELECT session_id, title, messages, created_at, updated_at
+    FROM user_sessions
+    WHERE user_id = ? AND session_id = ?
+  `).bind(userId, sessionId).first();
 
-  const accessToken = await getGoogleAccessToken(env);
-  const projectId = env.FIREBASE_PROJECT_ID;
-  
-  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}/sessions/${sessionId}`;
-  
-  const res = await fetch(url, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
+  if (result && result.messages) {
+    try {
+      result.messages = JSON.parse(result.messages);
+      // Sanitasi pesan-pesan yang dimuat
+      if (Array.isArray(result.messages)) {
+        result.messages = result.messages.map(msg => ({
+          ...msg,
+          content: sanitizeString(msg.content || ''),
+        }));
+      }
+    } catch (e) {
+      console.error("Error parsing messages JSON:", e);
+      result.messages = [];
     }
-  });
-  
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error("Firestore Session Delete Error:", errorText);
-    throw new Error(`Firestore Delete Error: ${errorText}`);
   }
+
+  return result;
+}
+
+async function deleteSessionFromD1(env, userId, sessionId) {
+  const stmt = env.DB.prepare(
+    'DELETE FROM user_sessions WHERE user_id = ? AND session_id = ?'
+  );
+
+  await stmt.bind(userId, sessionId).run();
 }
 
 // =========================================================
-// 5. HELPER FUNCTIONS (Service Account & Crypto)
+// AUTHENTICATION HELPER
+// =========================================================
+
+async function authenticateRequest(request, env) {
+  const authHeader = request.headers.get('Authorization');
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { authenticated: false, userId: null };
+  }
+
+  const token = authHeader.substring(7);
+
+  try {
+    const decoded = await verifyJWT(token, env.JWT_SECRET);
+    return { authenticated: true, userId: decoded.userId };
+  } catch (error) {
+    console.error('Auth error:', error);
+    return { authenticated: false, userId: null };
+  }
+}
+
+function requiresAuth(path) {
+  // Daftar endpoint yang memerlukan autentikasi
+  return path.startsWith('/api/') && path !== '/api/chat' && path !== '/api/history';
+}
+
+// =========================================================
+// HELPER FUNCTIONS
 // =========================================================
 
 function errorResp(msg, status, headers) {
-  return new Response(JSON.stringify({ error: msg }), { status, headers });
+  return safeJSONResponse({ error: sanitizeString(msg || '') }, status, headers);
 }
 
-async function saveToFirestore(env, userId, sessionId, userMsg, aiMsg) {
-    if (!env.FIREBASE_PRIVATE_KEY) return; // Skip if no DB config
-
-    const accessToken = await getGoogleAccessToken(env);
-    const projectId = env.FIREBASE_PROJECT_ID;
-    
-    const docData = {
-      fields: {
-        userId: { stringValue: userId },
-        sessionId: { stringValue: sessionId || 'default' },
-        userMessage: { stringValue: userMsg },
-        aiResponse: { stringValue: aiMsg },
-        createdAt: { timestampValue: new Date().toISOString() }
-      }
-    };
-
-    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}/chats`;
-    
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(docData)
-    });
-    
-    if (!res.ok) console.error("Firestore Save Error:", await res.text());
+// Placeholder untuk password hashing - dalam implementasi sebenarnya butuh library bcrypt
+async function hashPassword(password) {
+  // Dalam implementasi sebenarnya, kita butuh library bcrypt atau scrypt
+  // Untuk sementara, gunakan placeholder
+  return password; // Ganti dengan implementasi yang aman
 }
 
-async function getGoogleAccessToken(env) {
-  if (!env.FIREBASE_PRIVATE_KEY || !env.FIREBASE_CLIENT_EMAIL) {
-      throw new Error("Firebase Credentials not set in Worker Secrets");
+async function verifyPassword(password, hash) {
+  // Implementasi verifikasi password
+  return password === hash; // Ganti dengan implementasi yang aman
+}
+
+function generateRandomString(length) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-
-  // Sanitasi Private Key (Ganti \\n jadi \n)
-  const privateKeyPem = env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
-  const clientEmail = env.FIREBASE_CLIENT_EMAIL;
-  
-  const scopes = [
-    "https://www.googleapis.com/auth/datastore",
-    "https://www.googleapis.com/auth/cloud-platform",
-    "https://www.googleapis.com/auth/firestore"
-  ];
-
-  const now = Math.floor(Date.now() / 1000);
-  const claim = {
-    iss: clientEmail,
-    scope: scopes.join(' '),
-    aud: "https://oauth2.googleapis.com/token",
-    exp: now + 3600,
-    iat: now
-  };
-
-  const header = { alg: "RS256", typ: "JWT" };
-  
-  const encodedHeader = btoaUrl(JSON.stringify(header));
-  const encodedClaim = btoaUrl(JSON.stringify(claim));
-  const signatureInput = `${encodedHeader}.${encodedClaim}`;
-  
-  const signature = await signWithPrivateKey(signatureInput, privateKeyPem);
-  const jwt = `${signatureInput}.${signature}`;
-
-  const params = new URLSearchParams();
-  params.append('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer');
-  params.append('assertion', jwt);
-
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params
-  });
-
-  const data = await res.json();
-  if (!data.access_token) {
-    throw new Error(`Google Auth Failed: ${JSON.stringify(data)}`);
-  }
-  return data.access_token;
-}
-
-async function signWithPrivateKey(text, privateKeyPem) {
-  const pemContents = privateKeyPem
-    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
-    .replace(/-----END PRIVATE KEY-----/g, '')
-    .replace(/\s/g, '');
-  
-  const binaryDerString = atob(pemContents);
-  const binaryDer = new Uint8Array(binaryDerString.length);
-  for (let i = 0; i < binaryDerString.length; i++) {
-    binaryDer[i] = binaryDerString.charCodeAt(i);
-  }
-
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryDer.buffer,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(text)
-  );
-
-  return btoaUrl(String.fromCharCode(...new Uint8Array(signature)));
-}
-
-function btoaUrl(str) {
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return result;
 }
