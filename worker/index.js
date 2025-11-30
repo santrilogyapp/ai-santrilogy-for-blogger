@@ -44,7 +44,7 @@ export default {
         return await handleAdminInput(request, env);
       }
 
-      if (path === '/' || path === '/health') {
+      if (path === '/' || path === '/health' || path === '/auth/health') {
         return safeJSONResponse({ status: 'Online', mode: 'Smart RAG' }, 200, corsHeaders);
       }
 
