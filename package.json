@@ -1,30 +1,25 @@
 {
-  "name": "santrilogy-ai-for-blogger",
-  "version": "1.0.0",
-  "description": "Santrilogy AI adalah template Blogger canggih yang menyediakan antarmuka chat AI untuk diskusi tentang Kitab Kuning, pendidikan Islam, teknologi, dan cerita inspiratif.",
-  "main": "js/main.js",
+  "name": "santrilogy-ai-worker",
+  "version": "2.0.0",
+  "description": "Secure backend worker for Santrilogy AI application",
+  "main": "worker/worker-fixed.js",
   "scripts": {
-    "start": "python3 -m http.server 8000",
-    "dev": "python3 -m http.server 8000",
-    "test": "echo \"Running syntax checks...\" && node -c js/main.js && node -c js/firebase-safe.js && node -c js/worker-integration.js && echo \"All JavaScript files have valid syntax!\""
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/santrilogyapp/ai-santrilogy-for-blogger.git"
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "test": "echo \"Testing not configured yet\""
   },
   "keywords": [
-    "blogger",
-    "template",
+    "cloudflare",
+    "workers",
     "ai",
-    "islamic",
-    "education",
     "chat",
-    "arabic"
+    "authentication",
+    "firebase"
   ],
-  "author": "Santrilogy",
+  "author": "Santrilogy AI Team",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/santrilogyapp/ai-santrilogy-for-blogger/issues"
-  },
-  "homepage": "https://github.com/santrilogyapp/ai-santrilogy-for-blogger#readme"
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20230419.0",
+    "wrangler": "^3.0.0"
+  }
 }
