@@ -1,6 +1,6 @@
 // ========== CONFIGURATION ==========
 var CONFIG = {
-    WORKER_URL: "https://santrilogy-ai.santrilogyapp.workers.dev/",
+    WORKER_URL: "https://worker-santrilogy-ai.santrilogyapp.workers.dev/",
     MAX_HISTORY: 50,
     FEEDBACK_DELAY: 1200000,
     DONATION_MESSAGE_COUNT: 7
