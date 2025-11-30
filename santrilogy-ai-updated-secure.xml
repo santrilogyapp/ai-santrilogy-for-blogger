@@ -2172,10 +2172,10 @@
     <script>
     //<![CDATA[
     // ========== CLOUDFLARE WORKER INTEGRATION ==========
-    // URL Production: https://worker-santrilogy-ai.santrilogyapp.workers.dev
+    // URL Production: https://santrilogy-ai.santrilogyapp.workers.dev
 
     var CLOUDFLARE_WORKER_CONFIG = {
-        BASE_URL: "https://worker-santrilogy-ai.santrilogyapp.workers.dev",
+        BASE_URL: "https://santrilogy-ai.santrilogyapp.workers.dev",
         ENDPOINTS: {
             CHAT: '/api/chat',
             HISTORY: '/api/history',
@@ -3094,7 +3094,7 @@
             console.log('Current auth system status:', checkAuthSystemStatus());
 
             // Redirect ke endpoint Google auth di worker
-            const workerUrl = "https://worker-santrilogy-ai.santrilogyapp.workers.dev";
+            const workerUrl = "https://santrilogy-ai.santrilogyapp.workers.dev";
             const redirectUrl = `${workerUrl}/api/auth/google`;
 
             console.log('Redirecting to Google auth:', redirectUrl);
@@ -3130,7 +3130,7 @@
     window.testWorkerConnection = async function() {
         try {
             console.log('Testing worker connection...');
-            const response = await fetch('https://worker-santrilogy-ai.santrilogyapp.workers.dev/health');
+            const response = await fetch('https://santrilogy-ai.santrilogyapp.workers.dev/health');
             const data = await response.json();
             console.log('Worker connection successful:', data);
             return true;
