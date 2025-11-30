@@ -14,7 +14,7 @@ var CLOUDFLARE_AUTH_CONFIG = {
             VERIFY: '/auth/verify',
             LOGOUT: '/auth/logout',
             GOOGLE: '/auth/google',
-            HEALTH: '/auth/health'
+            HEALTH: '/health'  // Endpoint health adalah di root, bukan /auth/health
         }
     }
 };
@@ -546,9 +546,22 @@ FirebaseReplacement.getCurrentUserId = function() {
 // Test endpoint untuk verifikasi koneksi
 FirebaseReplacement.testConnection = async function() {
     try {
-        const result = await SantrilogyAPI.request(CLOUDFLARE_AUTH_CONFIG.ENDPOINTS.AUTH.HEALTH, 'GET');
-        console.log('Worker connection test successful:', result);
-        return true;
+        // Gunakan endpoint health yang benar
+        const response = await fetch(CLOUDFLARE_AUTH_CONFIG.BASE_URL + '/health', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Worker connection test successful:', result);
+            return true;
+        } else {
+            console.error('Health check failed with status:', response.status);
+            return false;
+        }
     } catch (error) {
         console.error('Worker connection test failed:', error);
         return false;
@@ -711,9 +724,22 @@ if (typeof window.firebaseLogout !== 'function') {
 // Fungsi untuk mengecek koneksi dengan Worker
 async function checkWorkerConnection() {
     try {
-        const response = await SantrilogyAPI.request(CLOUDFLARE_AUTH_CONFIG.ENDPOINTS.AUTH.HEALTH, 'GET');
-        console.log('Worker connection test response:', response);
-        return true;
+        const response = await fetch(CLOUDFLARE_AUTH_CONFIG.BASE_URL + '/health', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        console.log('Worker connection test response status:', response.status);
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Worker connection test successful:', result);
+            return true;
+        } else {
+            console.warn('Health check failed with status:', response.status);
+            return false;
+        }
     } catch (error) {
         console.warn('Worker connection failed:', error);
         return false;
