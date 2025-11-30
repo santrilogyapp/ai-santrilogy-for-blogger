@@ -3,7 +3,7 @@
 
 // Konfigurasi untuk komunikasi dengan API auth berbasis Cloudflare
 var CLOUDFLARE_AUTH_CONFIG = {
-    BASE_URL: "https://santrilogy-ai.santrilogyapp.workers.dev", // GANTI DENGAN URL WORKER ANDA YANG SEBENARNYA
+    BASE_URL: "https://worker-santrilogy-ai.santrilogyapp.workers.dev", // GANTI DENGAN URL WORKER ANDA YANG SEBENARNYA
     ENDPOINTS: {
         CHAT: '/api/chat',
         HISTORY: '/api/history',
