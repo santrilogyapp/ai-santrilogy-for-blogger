@@ -547,7 +547,7 @@ FirebaseReplacement.getCurrentUserId = function() {
 FirebaseReplacement.testConnection = async function() {
     try {
         // Gunakan endpoint health yang benar
-        const response = await fetch(CLOUDFLARE_AUTH_CONFIG.BASE_URL + '/', {
+        const response = await fetch(CLOUDFLARE_AUTH_CONFIG.BASE_URL + '/health', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
