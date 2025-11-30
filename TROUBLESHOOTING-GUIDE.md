@@ -15,9 +15,9 @@ wrangler deploy worker/index-enhanced.js --name worker-santrilogy-ai
 
 Setelah deployment, pastikan endpoint-endpoint berikut aktif:
 
-- `https://worker-santrilogy-ai.santrilogyapp.workers.dev/health` - Harus merespon
-- `https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/auth` - Untuk autentikasi
-- `https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/session` - Harus ada (ini yang sebelumnya hilang!)
+- `https://santrilogy-ai.santrilogyapp.workers.dev/health` - Harus merespon
+- `https://santrilogy-ai.santrilogyapp.workers.dev/api/auth` - Untuk autentikasi
+- `https://santrilogy-ai.santrilogyapp.workers.dev/api/session` - Harus ada (ini yang sebelumnya hilang!)
 
 ## 3. Konfigurasi Environment Variables
 

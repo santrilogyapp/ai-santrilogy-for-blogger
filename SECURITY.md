@@ -23,7 +23,7 @@ Browser (Template Blogger) → Cloudflare Workers (Backend Aman) → Firebase AP
 ### Template Production Ready
 - **File**: `santrilogy-ai-updated-secure.xml`
 - **Keamanan**: 100% - Tidak mengandung Firebase SDK di sisi klien
-- **Endpoint**: `https://worker-santrilogy-ai.santrilogyapp.workers.dev`
+- **Endpoint**: `https://santrilogy-ai.santrilogyapp.workers.dev`
 - **Fungsi**: Semua operasi data melalui Cloudflare Workers
 
 ### Template Tidak Aman

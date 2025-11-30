@@ -1,5 +1,5 @@
 # Panduan Setup Cloudflare Workers untuk Santrilogy AI
-## URL Production: https://worker-santrilogy-ai.santrilogyapp.workers.dev
+## URL Production: https://santrilogy-ai.santrilogyapp.workers.dev
 
 ## Ikhtisar
 
@@ -8,7 +8,7 @@ Panduan ini menjelaskan cara mengganti Firebase langsung di template Blogger San
 ## Endpoint API Tersedia
 
 ### 1. Chat Endpoint
-- **URL**: `POST https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/chat`
+- **URL**: `POST https://santrilogy-ai.santrilogyapp.workers.dev/api/chat`
 - **Deskripsi**: Kirim pesan ke AI dan simpan percakapan
 - **Request Body**:
 ```json
@@ -27,7 +27,7 @@ Panduan ini menjelaskan cara mengganti Firebase langsung di template Blogger San
 ```
 
 ### 2. History Endpoint
-- **URL**: `GET https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/history?userId={userId}`
+- **URL**: `GET https://santrilogy-ai.santrilogyapp.workers.dev/api/history?userId={userId}`
 - **Deskripsi**: Ambil histori percakapan pengguna
 - **Response**:
 ```json
@@ -37,7 +37,7 @@ Panduan ini menjelaskan cara mengganti Firebase langsung di template Blogger San
 ```
 
 ### 3. Session Endpoint
-- **URL**: `POST https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/session`
+- **URL**: `POST https://santrilogy-ai.santrilogyapp.workers.dev/api/session`
 - **Deskripsi**: Operasi sesi (simpan, muat, hapus)
 - **Request Body**:
 ```json
@@ -50,7 +50,7 @@ Panduan ini menjelaskan cara mengganti Firebase langsung di template Blogger San
 ```
 
 ### 4. Auth Endpoint
-- **URL**: `POST https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/auth`
+- **URL**: `POST https://santrilogy-ai.santrilogyapp.workers.dev/api/auth`
 - **Deskripsi**: Operasi otentikasi
 - **Request Body**:
 ```json
@@ -78,10 +78,10 @@ Hapus atau komen skrip berikut dari template XML Anda:
 Tambahkan kode berikut ke template Blogger (sebelum skrip utama):
 ```javascript
 // ========== CLOUDFLARE WORKER INTEGRATION ==========
-// URL Production: https://worker-santrilogy-ai.santrilogyapp.workers.dev
+// URL Production: https://santrilogy-ai.santrilogyapp.workers.dev
 
 var CLOUDFLARE_WORKER_CONFIG = {
-    BASE_URL: "https://worker-santrilogy-ai.santrilogyapp.workers.dev",
+    BASE_URL: "https://santrilogy-ai.santrilogyapp.workers.dev",
     ENDPOINTS: {
         CHAT: '/api/chat',
         HISTORY: '/api/history', 
@@ -225,12 +225,12 @@ Ganti fungsi-fungsi Firebase di file main.js yang dimasukkan ke template dengan 
 
 ### 1. Test Health Check
 ```bash
-curl https://worker-santrilogy-ai.santrilogyapp.workers.dev/health
+curl https://santrilogy-ai.santrilogyapp.workers.dev/health
 ```
 
 ### 2. Test Chat
 ```bash
-curl -X POST https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/chat \
+curl -X POST https://santrilogy-ai.santrilogyapp.workers.dev/api/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Halo, ini test dari template Blogger",
@@ -241,7 +241,7 @@ curl -X POST https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/chat \
 
 ### 3. Test History
 ```bash
-curl "https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/history?userId=test_user_123"
+curl "https://santrilogy-ai.santrilogyapp.workers.dev/api/history?userId=test_user_123"
 ```
 
 ## Troubleshooting
@@ -261,7 +261,7 @@ curl "https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/history?userId=
 ## Keamanan
 
 ### 1. Production Ready
-- URL Cloudflare Worker Anda: `https://worker-santrilogy-ai.santrilogyapp.workers.dev`
+- URL Cloudflare Worker Anda: `https://santrilogy-ai.santrilogyapp.workers.dev`
 - Tidak ada API keys Firebase terekspos di sisi klien
 - Semua operasi data melalui backend aman
 
@@ -269,4 +269,4 @@ curl "https://worker-santrilogy-ai.santrilogyapp.workers.dev/api/history?userId=
 Pertimbangkan untuk menambahkan rate limiting di Cloudflare Workers untuk mencegah abuse.
 
 ---
-*Gunakan URL https://worker-santrilogy-ai.santrilogyapp.workers.dev untuk semua komunikasi API di template Blogger Anda.*
+*Gunakan URL https://santrilogy-ai.santrilogyapp.workers.dev untuk semua komunikasi API di template Blogger Anda.*

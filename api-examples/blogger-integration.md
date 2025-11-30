@@ -11,7 +11,7 @@ Di template Blogger Anda, ganti bagian konfigurasi dengan URL Cloudflare Worker 
 ```javascript
 // Ganti bagian konfigurasi worker di template
 var API_CONFIG = {
-    BASE_URL: "https://worker-santrilogy-ai.santrilogyapp.workers.dev", // URL PRODUKSI ANDA
+    BASE_URL: "https://santrilogy-ai.santrilogyapp.workers.dev", // URL PRODUKSI ANDA
     ENDPOINTS: {
         CHAT: '/api/chat',
         HISTORY: '/api/history',

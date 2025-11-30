@@ -13,7 +13,7 @@ All notable changes to the Santrilogy AI for Blogger project will be documented 
 - Multiple backend API deployment alternatives (Vercel, Netlify, Express.js)
 - Blogger template integration guide for secure backend communication
 - API examples for various deployment platforms
-- Production deployment at https://worker-santrilogy-ai.santrilogyapp.workers.dev
+- Production deployment at https://santrilogy-ai.santrilogyapp.workers.dev
 - Complete integration guide for production Cloudflare Workers
 - Secure Blogger template version (santrilogy-ai-updated-secure.xml) without Firebase exposure
 - Cloudflare Worker API integration code embedded directly in template

@@ -88,7 +88,7 @@ Browser (Template Blogger) → Backend API → Firebase/Backend Services
    - Tanpa perlu Wrangler CLI: bisa ditulis langsung di dashboard
    - Serverless dan cepat
    - Biaya rendah
-   - **URL Production Contoh**: `https://worker-santrilogy-ai.santrilogyapp.workers.dev`
+   - **URL Production Contoh**: `https://santrilogy-ai.santrilogyapp.workers.dev`
 
 2. **Vercel** (Paling mudah untuk Next.js)
    - Deploy dengan `vercel` command

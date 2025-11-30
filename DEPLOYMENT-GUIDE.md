@@ -39,7 +39,7 @@ wrangler deploy
 
 1. Setelah deployment berhasil, Worker akan aktif di URL: `https://worker-santrilogy-ai.YOUR_SUBDOMAIN.workers.dev`
 2. Pastikan URL tersebut cocok dengan konfigurasi di file XML
-3. Di file `santrilogy-ai-updated-secure.xml`, parameter `BASE_URL` sudah disesuaikan ke `https://worker-santrilogy-ai.santrilogyapp.workers.dev`
+3. Di file `santrilogy-ai-updated-secure.xml`, parameter `BASE_URL` sudah disesuaikan ke `https://santrilogy-ai.santrilogyapp.workers.dev`
 
 ## Endpoint yang Tersedia
 

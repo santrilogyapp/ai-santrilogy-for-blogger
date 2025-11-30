@@ -2,7 +2,7 @@
 
 // Konfigurasi untuk komunikasi dengan Cloudflare Worker
 var CLOUDFLARE_WORKER_CONFIG = {
-    BASE_URL: "https://worker-santrilogy-ai.santrilogyapp.workers.dev", // GANTI DENGAN URL WORKER ANDA
+    BASE_URL: "https://santrilogy-ai.santrilogyapp.workers.dev", // GANTI DENGAN URL WORKER ANDA
     ENDPOINTS: {
         CHAT: '/api/chat',
         HISTORY: '/api/history',

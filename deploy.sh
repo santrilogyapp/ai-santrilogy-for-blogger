@@ -38,7 +38,7 @@ compatibility_date = "2023-12-01"
 [env.production]
 account_id = "YOUR_ACCOUNT_ID_HERE"  # Ganti dengan account ID Anda
 workers_dev = false
-route = { pattern = "worker-santrilogy-ai.santrilogyapp.workers.dev", zone_id = "" }
+route = { pattern = "santrilogy-ai.santrilogyapp.workers.dev", zone_id = "" }
 EOL
 
 echo "✓ File wrangler.toml telah dibuat"
