@@ -770,3 +770,13 @@ setTimeout(function() {
         console.warn('Main auth functions not loaded, ensuring fallbacks are available');
     }
 }, 1000);
+
+// Pastikan semua fungsi autentikasi ekspor juga tersedia sebagai fungsi utama
+window.firebaseLoadHistory = FirebaseReplacement.loadHistory;
+window.firebaseSaveSession = FirebaseReplacement.saveSession;
+window.firebaseLoadSession = FirebaseReplacement.loadSession;
+window.firebaseDeleteSession = FirebaseReplacement.deleteSession;
+
+// Tandai bahwa inisialisasi utama selesai
+window.mainAuthFunctionsInitialized = true;
+console.log('Santrilogy AI: All main authentication functions initialized');

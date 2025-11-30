@@ -1,19 +1,25 @@
-name = "worker-santrilogy-ai"
-main = "worker/worker-fixed.js"
+name = "santrilogy-ai"
+main = "worker/index.js"
 compatibility_date = "2023-12-01"
 
-[env.production]
-account_id = "YOUR_ACCOUNT_ID_HERE"  # Ganti dengan account ID Anda
-workers_dev = false
-route = { pattern = "worker-santrilogy-ai.santrilogyapp.workers.dev", zone_id = "" }
+# Environment variables
+[vars]
+ALLOWED_ORIGINS = "https://santrilogy-ai.blogspot.com,https://www.santrilogy-ai.blogspot.com"
 
-# Environment variables perlu diatur via wrangler secret put
-# Contoh:
-# npx wrangler secret put FIREBASE_PROJECT_ID
-# npx wrangler secret put FIREBASE_CLIENT_EMAIL
-# npx wrangler secret put FIREBASE_PRIVATE_KEY
-# npx wrangler secret put FIREBASE_API_KEY
-# npx wrangler secret put GOOGLE_CLIENT_ID
-# npx wrangler secret put GOOGLE_CLIENT_SECRET
-# npx wrangler secret put AI_WORKER_URL
-# npx wrangler secret put ALLOWED_ORIGINS
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"  # Available in your Worker at env.DB
+database_name = "santrilogy-ai-db"
+database_id = "your-actual-database-id-here"  # Ganti dengan ID yang Anda dapatkan
+
+# Environment-specific configuration
+[env.production]
+account_id = "your-account-id"
+workers_dev = false
+route = { pattern = "worker-santrilogy-ai.santrilogyapp.workers.dev/*", zone_id = "your-zone-id" }
+
+# Environment-specific variables (set via wrangler secret put)
+# - JWT_SECRET: Secret untuk JWT signing
+# - GOOGLE_CLIENT_ID: Google OAuth Client ID
+# - GOOGLE_CLIENT_SECRET: Google OAuth Client Secret
+# - AI_WORKER_URL: URL untuk AI processing (opsional)
