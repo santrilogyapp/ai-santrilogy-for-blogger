@@ -16,7 +16,7 @@ database_id = "85f0a1d6-ef9f-482c-b9cc-dd35b4843e5d"  # Ganti dengan ID yang And
 [env.production]
 account_id = "your-account-id"
 workers_dev = false
-route = { pattern = "worker-santrilogy-ai.santrilogyapp.workers.dev/*", zone_id = "your-zone-id" }
+route = { pattern = "santrilogy-ai.santrilogyapp.workers.dev/*", zone_id = "your-zone-id" }
 
 # Environment-specific variables (set via wrangler secret put)
 # - JWT_SECRET: Secret untuk JWT signing
