@@ -1,7 +1,16 @@
-// ========== SANTRILOGY AI - CLOUDFLARE AUTH INTEGRATION WITH DEBUG ==========
-// File integrasi baru untuk sistem autentikasi berbasis Cloudflare Workers + D1 (dengan debug)
+// ========== SANTRILOGY AI v2.0.0 - CLOUDFLARE AUTH INTEGRATION WITH DEBUG ==========
+// Production-ready version with JWT authentication and D1 database integration
+// Global Namespace Implementation for Maximum Browser Compatibility
+(function(global) {
+    'use strict';
 
-// Konfigurasi untuk komunikasi dengan API auth berbasis Cloudflare
+    // Check for required features
+    if (typeof window === 'undefined') {
+        console.error('Santrilogy AI Worker Integration: Requires browser environment');
+        return;
+    }
+
+    // Konfigurasi untuk komunikasi dengan API auth berbasis Cloudflare
 var CLOUDFLARE_AUTH_CONFIG = {
     BASE_URL: "https://santrilogy-ai.santrilogyapp.workers.dev", // GANTI DENGAN URL WORKER ANDA YANG SEBENARNYA
     ENDPOINTS: {
@@ -798,3 +807,5 @@ window.firebaseDeleteSession = CloudflareD1Replacement.deleteSession;
 // Tandai bahwa inisialisasi utama selesai
 window.mainAuthFunctionsInitialized = true;
 console.log('Santrilogy AI: All main Cloudflare authentication functions initialized');
+
+})(typeof window !== 'undefined' ? window : global);

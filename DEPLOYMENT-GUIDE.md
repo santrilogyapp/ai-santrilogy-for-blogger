@@ -41,6 +41,37 @@ wrangler deploy
 2. Pastikan URL tersebut cocok dengan konfigurasi di file XML
 3. Di file `santrilogy-ai-updated-secure.xml`, parameter `BASE_URL` sudah disesuaikan ke `https://santrilogy-ai.santrilogyapp.workers.dev`
 
+## Semantic Versioning untuk CDN (Penting untuk Produksi)
+
+Untuk mencegah commit buruk merusak situs produksi, gunakan pendekatan semantic versioning:
+
+### 1. Untuk Deployment Produksi
+Ganti referensi CDN `@main` dengan commit hash atau tag versi spesifik:
+
+**GANTI INI:**
+```html
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/utils.js'/>
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/worker-integration.js'/>
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@main/js/main.js'/>
+```
+
+**DENGAN INI (gunakan commit hash saat ini):**
+```html
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@d792e41/js/utils.js'/>
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@d792e41/js/worker-integration.js'/>
+<script src='https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@d792e41/js/main.js'/>
+```
+
+### 2. Pembuatan Release
+- Buat GitHub Release (misal: v2.0.0) setelah uji coba selesai
+- Gunakan format: `https://cdn.jsdelivr.net/gh/santrilogyapp/ai-santrilogy-for-blogger@v2.0.0/...`
+
+### 3. Proses Deployment Aman
+1. Uji perubahan di branch terpisah
+2. Jika berhasil, buat commit hash atau tag release
+3. Update template Blogger dengan versi tersebut
+4. Simpan backup template sebelumnya
+
 ## Endpoint yang Tersedia
 
 - `GET /health` - Cek status kesehatan Worker

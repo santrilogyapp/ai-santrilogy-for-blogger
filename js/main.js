@@ -1,4 +1,22 @@
-// ========== CONFIGURATION ==========
+// ========== SANTRILOGY AI v2.0.0 ==========
+// Production-ready version with Cloudflare Workers integration
+// Global Namespace Implementation for Maximum Browser Compatibility
+
+(function(global) {
+    'use strict';
+
+    // Check for required features
+    if (typeof window === 'undefined') {
+        console.error('Santrilogy AI: Requires browser environment');
+        return;
+    }
+
+    // Define Santrilogy namespace to prevent global pollution
+    if (typeof global.SantrilogyAI === 'undefined') {
+        global.SantrilogyAI = {};
+    }
+
+    // ========== CONFIGURATION ==========
 var CONFIG = {
     WORKER_URL: "https://santrilogy-ai.santrilogyapp.workers.dev/",
     MAX_HISTORY: 50,
@@ -7,22 +25,38 @@ var CONFIG = {
 };
 
 // ========== ENHANCED SYSTEM PROMPT ==========
-var SYSTEM_PROMPT = 'Kamu adalah "Santrilogy AI", asisten cerdas yang berperan sebagai teman diskusi yang sangat cakap, cerdas, dan menyenangkan.\n\n' +
-    '## IDENTITAS & KEPRIBADIAN\n' +
-    '- Nama: Santrilogy AI\n' +
-    '- Karakter: Ramah, humble, cerdas, dan selalu antusias membantu\n' +
-    '- Kecenderungan: Ahlussunnah wal Jamaah, Mazhab Syafii dalam fikih, Asyari-Maturidi dalam Akidah dan Al-Ghazali dalam Akhlak-Tasawuf\n' +
-    '- Gaya bicara: Santai tapi tetap berilmu, menggunakan bahasa Indonesia yang baik dengan sentuhan khas santri\n' +
-    '- Panggilan untuk user: "Kawan" atau nama mereka jika sudah diketahui\n\n' +
-    '## KEAHLIAN UTAMA\n' +
-    '1. **Ilmu Keislaman**: Kitab Kuning, Fiqih, Ushul Fiqih, Tafsir, Hadits, Nahwu Shorof, Balaghah\n' +
-    '2. **Pendidikan**: Metode pembelajaran efektif, tips belajar, manajemen waktu santri, dan manajemen pendidikan\n' +
-    '3. **Teknologi**: Programming, AI, tools digital untuk dakwah\n' +
-    '4. **Analisis Data**: Mampu menganalisis data numerik, grafik, dan statistik\n' +
-    '5. **Teori Konspirasi**: Membahas teori konspirasi dengan logis dan sains, tanpa menyebarkan informasi yang salah\n' +
-    '6. **Hiburan**: Suka anime dan film, bisa merekomendasikan, menganalisis, dan membahas karakter\n' +
-    '7. **Seni Bercerita**: Pandai bercerita dan menghibur, kadang puitis kadang humoris\n' +
-    '8. **Umum**: Sejarah Islam, motivasi, cerita inspiratif, konsultasi ringan\n\n' +
+var SYSTEM_PROMPT = 'Nama: Santrilogy AI\n' +
+    'Peran: Asisten diskusi virtual (teman belajar), bukan guru mutlak.\n\n' +
+    '## 1. IDENTITAS & LANDASAN PEMIKIRAN (Core Identity)\n' +
+    'Teologi (Akidah): Wajib berpegang teguh pada Ahlussunnah wal Jamaah (Asy\'ariyah & Maturidiyah).\n\n' +
+    'Fikih (Hukum): Mengutamakan Mazhab Syafi\'i.\n\n' +
+    'Tasawuf/Akhlak: Mengikuti jalur Imam Al-Ghazali.\n\n' +
+    'Batasan Tegas:\n' +
+    '- Hindari pemahaman Tajsim (menyerupakan Allah dengan makhluk) atau ekstrem tekstualis (seperti Wahabi/Salafi ekstrem).\n' +
+    '- Hindari pemahaman Liberal yang melonggarkan syariat.\n' +
+    '- Tugasmu adalah menjaga kemurnian sanad keilmuan pesantren.\n\n' +
+    '## 2. PROTOKOL MENJAWAB PERTANYAAN (Logic Flow)\n' +
+    'Setiap kali menerima pertanyaan, ikuti alur logika berikut:\n\n' +
+    'Langkah 1: Cek Database (RAG - Vectorize Cloudflare).\n' +
+    'Cari apakah ada data relevan dalam knowledge base yang disediakan.\n' +
+    'JIKA ADA DATA: Gunakan data tersebut sebagai sumber utama jawaban.\n' +
+    'Format Khusus Pertanyaan Hukum (Fikih) dengan Data:\n' +
+    '- Jawaban Singkat: (Langsung pada poin hukumnya, misal: Wajib, Haram, Sah, Batal).\n' +
+    '- Penjelasan: (Uraian dalil dan konteks).\n' +
+    '- Rujukan: (Kutipkan teks Arab lengkap dari kitab aslinya sesuai data, sebutkan nama kitabnya).\n\n' +
+    'Langkah 2: Jika Data TIDAK DITEMUKAN.\n' +
+    'Jawab menggunakan pengetahuan umum AI namun tetap dalam koridor Aswaja (Poin 1).\n' +
+    'WAJIB Menyertakan Disclaimer: Pada awal atau akhir jawaban, kamu harus berkata jujur bahwa jawaban ini tidak berasal dari database internal dan merupakan hasil analisa AI.\n' +
+    'Kalimat Wajib (Disclaimer): "Maaf, referensi spesifik untuk pertanyaan ini belum tersedia di database kitab saya. Jawaban di atas adalah analisa pribadi saya sebagai AI. Mohon jangan dijadikan fatwa mutlak. Sangat disarankan untuk menanyakan kembali (tashih) kepada Guru/Kyai secara langsung agar sanad keilmuanmu jelas dan tersambung."\n\n' +
+    '## 3. GAYA BAHASA & INTERAKSI\n' +
+    'Tone: Sahabat, santun, khas santri, namun tetap clean dan cerdas.\n\n' +
+    'Onboarding (Sapaan Awal):\n' +
+    'Ketika pengguna menekan tombol "Mulai", sapaan pertamamu harus persis seperti ini: "Assalamualaikum, kawan! Saya Santrilogy AI, teman diskusimu yang siap menemanimu belajar dan berdiskusi tentang apapun, mulai dari resume (khulashah) hasil belajarmu, terjemah teks arab, dan berbagai topik menarik lainnya. Sebelumnya, biar lebih afdhol, bolehkah kita kenalan? Aku bisa memanggilmu siapa?"\n\n' +
+    '## 4. FITUR & KEMAMPUAN KHUSUS\n' +
+    'Kamu memiliki kapabilitas khusus yang bisa diaktifkan sesuai permintaan user:\n\n' +
+    'Alat Bantu Belajar: Terjemah Kitab, Tasykil (Memberi Harakat), dan Bedah I\'rob.\n\n' +
+    'Generator RPP Pesantren: Jika user memberikan teks Arab (ibarot), olah menjadi RPP lengkap yang berisi: Standar Kompetensi (SK), Kompetensi Dasar (KD), Indikator, dan Contoh Soal.\n\n' +
+    'Tes Logika (Mantiq): Jika diminta tes IQ/Penalaran, gunakan pendekatan silogisme (Qiyas) sesuai kaidah ilmu Mantiq.\n\n' +
     '## FORMAT TEKS ARAB - SANGAT PENTING!\n' +
     'Untuk menampilkan teks Arab dengan indah, gunakan format berikut:\n\n' +
     '1. **Ayat Al-Quran** - gunakan tag khusus:\n' +
@@ -780,6 +814,18 @@ function fetchAIResponse(text, imageBase64, mimeType) {
             var actionsHTML = '';
             if (message.role === 'assistant') {
                 actionsHTML = '<div class="message-actions">' +
+                    '<button class="action-btn like-btn" title="Suka">' +
+                        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2H7l3 7v5"/></svg>' +
+                    '</button>' +
+                    '<button class="action-btn dislike-btn" title="Tidak Suka">' +
+                        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v5a3 3 0 0 0 3 3l4-9v-5a3 3 0 0 0-3-3l-4 9v5z"/><path d="M3 14h.01"/></svg>' +
+                    '</button>' +
+                    '<button class="action-btn share-btn" title="Bagikan">' +
+                        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>' +
+                    '</button>' +
+                    '<button class="action-btn report-btn" title="Laporkan">' +
+                        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M5.072 5.072a7 7 0 1 1 9.856 9.856 7 7 0 0 1-9.856-9.856z"/></svg>' +
+                    '</button>' +
                     '<button class="action-btn copy-msg-btn" title="Salin">' +
                         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
                     '</button>' +
@@ -800,6 +846,10 @@ function fetchAIResponse(text, imageBase64, mimeType) {
             // Add event listeners for action buttons
             var copyBtn = div.querySelector('.copy-msg-btn');
             var regenBtn = div.querySelector('.regenerate-btn');
+            var likeBtn = div.querySelector('.like-btn');
+            var dislikeBtn = div.querySelector('.dislike-btn');
+            var shareBtn = div.querySelector('.share-btn');
+            var reportBtn = div.querySelector('.report-btn');
 
             if (copyBtn) {
                 copyBtn.addEventListener('click', function() {
@@ -810,6 +860,30 @@ function fetchAIResponse(text, imageBase64, mimeType) {
             if (regenBtn) {
                 regenBtn.addEventListener('click', function() {
                     regenerateMessage();
+                });
+            }
+
+            if (likeBtn) {
+                likeBtn.addEventListener('click', function() {
+                    toggleLike(likeBtn);
+                });
+            }
+
+            if (dislikeBtn) {
+                dislikeBtn.addEventListener('click', function() {
+                    toggleDislike(dislikeBtn);
+                });
+            }
+
+            if (shareBtn) {
+                shareBtn.addEventListener('click', function() {
+                    shareMessage(div);
+                });
+            }
+
+            if (reportBtn) {
+                reportBtn.addEventListener('click', function() {
+                    openReportModal();
                 });
             }
 
@@ -1881,3 +1955,129 @@ function fetchAIResponse(text, imageBase64, mimeType) {
         creditNotice.style.cssText = 'position:absolute !important; top:-1000px !important; left:-1000px !important; width:1px !important; height:1px !important; overflow:hidden !important;';
         creditNotice.innerHTML = 'Powered by Santrilogy AI - www.lp.santrilogy.com';
         document.body.appendChild(creditNotice);
+
+        // ========== NEW FEATURES FUNCTIONS ==========
+        // Toggle like button
+        function toggleLike(likeBtn) {
+            likeBtn.classList.toggle('active');
+            // Unlike dislike button if like is clicked
+            var dislikeBtn = likeBtn.parentNode.querySelector('.dislike-btn');
+            if (dislikeBtn && dislikeBtn.classList.contains('active')) {
+                dislikeBtn.classList.remove('active');
+            }
+        }
+
+        // Toggle dislike button
+        function toggleDislike(dislikeBtn) {
+            dislikeBtn.classList.toggle('active');
+            // Unlike like button if dislike is clicked
+            var likeBtn = dislikeBtn.parentNode.querySelector('.like-btn');
+            if (likeBtn && likeBtn.classList.contains('active')) {
+                likeBtn.classList.remove('active');
+            }
+        }
+
+        // Share message function
+        function shareMessage(messageDiv) {
+            var content = messageDiv.querySelector('.message-bubble').textContent;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Santrilogy AI',
+                    text: content,
+                    url: window.location.href
+                }).catch(function(error) {
+                    console.log('Sharing failed:', error);
+                    fallbackShareMessage(content);
+                });
+            } else {
+                fallbackShareMessage(content);
+            }
+        }
+
+        // Fallback for sharing
+        function fallbackShareMessage(content) {
+            navigator.clipboard.writeText(content).then(function() {
+                if (typeof showToast === 'function') {
+                    showToast('Pesan disalin ke clipboard! 📋', 'success');
+                }
+            }).catch(function(err) {
+                console.error('Could not copy text: ', err);
+            });
+        }
+
+        // Open report modal
+        function openReportModal() {
+            if (window.SantrilogyApp && typeof window.SantrilogyApp.openReportModal === 'function') {
+                window.SantrilogyApp.openReportModal();
+            } else {
+                // Fallback: open email client directly
+                var subject = encodeURIComponent('Laporan Pesan dari Santrilogy AI');
+                var body = encodeURIComponent('Mohon tinjau pesan yang dilaporkan sesegera mungkin.');
+                window.location.href = 'mailto:santrilogyapp@gmail.com?subject=' + subject + '&body=' + body;
+            }
+        }
+
+        // ========== SPECIAL FEATURES FUNCTIONS ==========
+
+        // Terjemah Kitab Function
+        function requestKitabTranslation() {
+            // This will prompt the user to provide text for translation
+            var inputText = prompt("Masukkan teks Arab yang ingin diterjemahkan:");
+            if (inputText) {
+                // Send to AI with specific instruction for kitab translation
+                var translationRequest = "Tolong terjemahkan teks Arab berikut ke dalam bahasa Indonesia: " + inputText;
+                // Add this to the chat if needed, or send directly to AI
+                if (elements.inputField) {
+                    elements.inputField.value = translationRequest;
+                    handleInput();
+                }
+            }
+        }
+
+        // Tasykil Function
+        function requestTasykil() {
+            var arabicText = prompt("Masukkan teks Arab yang ingin diberi harakat (tasykil):");
+            if (arabicText) {
+                var tasykilRequest = "Tolong berikan harakat (tasykil) pada teks Arab berikut: " + arabicText;
+                if (elements.inputField) {
+                    elements.inputField.value = tasykilRequest;
+                    handleInput();
+                }
+            }
+        }
+
+        // Bedah I'rob Function
+        function requestIrobAnalysis() {
+            var arabicText = prompt("Masukkan teks Arab yang ingin dianalisis i'rob-nya:");
+            if (arabicText) {
+                var irobRequest = "Tolong analisis i'rob (tata bahasa Arab) dari teks berikut: " + arabicText;
+                if (elements.inputField) {
+                    elements.inputField.value = irobRequest;
+                    handleInput();
+                }
+            }
+        }
+
+        // Generate RPP Pesantren Function
+        function requestRPPGeneration() {
+            var arabicText = prompt("Masukkan teks Arab (ibarot) untuk pembuatan RPP:");
+            if (arabicText) {
+                var rppRequest = "Tolong buatkan RPP pesantren lengkap berdasarkan teks Arab berikut, yang berisi: Standar Kompetensi (SK), Kompetensi Dasar (KD), Indikator, dan Contoh Soal: " + arabicText;
+                if (elements.inputField) {
+                    elements.inputField.value = rppRequest;
+                    handleInput();
+                }
+            }
+        }
+
+        // Tes Logika (Mantiq) Function
+        function requestMantiqTest() {
+            var logicRequest = "Saya ingin mengikuti tes logika (mantiq) menggunakan pendekatan silogisme (qiyas)";
+            if (elements.inputField) {
+                elements.inputField.value = logicRequest;
+                handleInput();
+            }
+        }
+
+})(typeof window !== 'undefined' ? window : global);

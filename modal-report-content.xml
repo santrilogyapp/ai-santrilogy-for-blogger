@@ -1,19 +1,4 @@
-    // Jalankan pengecekan status saat diinisialisasi
-    setTimeout(() => {
-        console.log('=== Santrilogy AI Authentication Debug ===');
-        checkAuthSystemStatus();
-
-        // Coba test connection
-        window.testWorkerConnection();
-    }, 1000);
-
-    // Tandai bahwa sistem debug sudah dimuat
-    window.authDebugReady = true;
-    console.log('Santrilogy AI: Debug authentication system loaded');
-    //]]>
-    </script>
-
-    <!-- Report Modal -->
+<!-- Report Modal -->
     <div class="modal-overlay" id="reportModal">
         <div class="modal">
             <button class="modal-close" id="reportModalClose">&times;</button>

@@ -1,6 +1,17 @@
-// ========== UTILITY FUNCTIONS ==========
+// ========== SANTRILOGY AI v2.0.0 - UTILITY FUNCTIONS ==========
+// Production-ready utility functions for Santrilogy AI application
+// Global Namespace Implementation for Maximum Browser Compatibility
 
-// Function untuk format angka
+(function(global) {
+    'use strict';
+
+    // Check for required features
+    if (typeof window === 'undefined') {
+        console.error('Santrilogy AI Utils: Requires browser environment');
+        return;
+    }
+
+    // Function untuk format angka
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
@@ -257,3 +268,5 @@ if (typeof module !== 'undefined' && module.exports) {
         preventMultipleSubmit
     };
 }
+
+})(typeof window !== 'undefined' ? window : global);

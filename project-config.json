@@ -1,7 +1,7 @@
 {
   "projectName": "Santrilogy AI for Blogger",
-  "version": "1.0.0",
-  "description": "Template Blogger canggih dengan fitur chat AI untuk diskusi Kitab Kuning, pendidikan Islam, teknologi, dan cerita inspiratif",
+  "version": "2.0.0",
+  "description": "Production-ready Template Blogger with secure Cloudflare Workers integration, advanced chat AI, and enhanced security",
   "files": [
     {
       "name": "js/main.js",

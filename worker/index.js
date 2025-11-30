@@ -3,9 +3,32 @@
  * Fitur: Auth, D1, Vectorize RAG, & Smart Topic Classification
  */
 
+// Rate limiting configuration
+const RATE_LIMIT_MAX_REQUESTS = 100; // Max requests per 15 minutes
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes in milliseconds
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // Basic rate limiting check (IP-based)
+    const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const ipHash = await hashString(clientIP);
+    const rateLimitKey = `rate_limit:${ipHash}:${Math.floor(Date.now() / RATE_LIMIT_WINDOW)}`;
+
+    try {
+      const rateCount = await env.KV.get(rateLimitKey) || 0;
+      if (rateCount >= RATE_LIMIT_MAX_REQUESTS) {
+        return new Response('Rate limit exceeded. Please slow down.', { status: 429 });
+      }
+      // Increment counter, set TTL to end of current window
+      await env.KV.put(rateLimitKey, rateCount + 1, {
+        expirationTtl: RATE_LIMIT_WINDOW / 1000 // in seconds
+      });
+    } catch (e) {
+      // If KV is not available, continue without rate limiting
+      console.warn('Rate limiting unavailable:', e.message);
+    }
     
     // --- 1. CONFIG & CORS ---
     const allowedOrigins = (env.ALLOWED_ORIGINS || 'https://santrilogy-ai.blogspot.com,https://www.santrilogy-ai.blogspot.com').split(',');
@@ -90,16 +113,43 @@ export default {
 
 async function handleSmartChat(request, env, ctx, headers, userId) {
   try {
-    const rawBody = await request.text();
-    let body;
-    try { body = JSON.parse(sanitizeString(rawBody)); } 
-    catch (e) { return errorResp('Invalid JSON', 400, headers); }
-    
-    let { message, sessionId } = body;
-    message = sanitizeString(message || '');
-    sessionId = sanitizeString(sessionId || 'default');
+    // Validate request method and content type
+    if (request.method !== 'POST') {
+      return errorResp('Method not allowed', 405, headers);
+    }
 
-    if (!message) return errorResp('Message required', 400, headers);
+    const rawBody = await request.text();
+
+    // Validate body is not empty
+    if (!rawBody || rawBody.trim().length === 0) {
+      return errorResp('Request body is required', 400, headers);
+    }
+
+    let body;
+    try {
+      body = JSON.parse(sanitizeString(rawBody));
+    } catch (e) {
+      return errorResp('Invalid JSON format', 400, headers);
+    }
+
+    // Validate required fields
+    let { message, sessionId } = body;
+    if (typeof message !== 'string' || message.trim().length === 0) {
+      return errorResp('Message is required and must be a non-empty string', 400, headers);
+    }
+
+    if (typeof sessionId !== 'string') {
+      sessionId = 'default';
+    }
+
+    // Sanitize inputs
+    message = sanitizeString(message);
+    sessionId = sanitizeString(sessionId);
+
+    // Additional validation
+    if (message.length > 2000) { // Prevent overly large messages
+      return errorResp('Message too long, maximum 2000 characters', 400, headers);
+    }
 
     // --- STEP A: KLASIFIKASI TOPIK (ISLAMIC CHECKER) ---
     // Tanya AI: Apakah ini soal agama?
@@ -276,20 +326,56 @@ async function handleAuthRoutes(request, env, headers) {
 // -- REGISTER --
 async function handleRegister(request, env, headers) {
   try {
-    const body = await request.json();
-    let { email, password, name } = body;
-    email = sanitizeString(email);
-    if (!email || !password) return errorResp('Email & Pass required', 400, headers);
+    if (request.method !== 'POST') {
+      return errorResp('Method not allowed', 405, headers);
+    }
 
+    const rawBody = await request.text();
+    if (!rawBody || rawBody.trim().length === 0) {
+      return errorResp('Request body is required', 400, headers);
+    }
+
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch (e) {
+      return errorResp('Invalid JSON format', 400, headers);
+    }
+
+    let { email, password, name } = body;
+
+    // Validate required fields
+    if (typeof email !== 'string' || !email.includes('@')) {
+      return errorResp('Valid email is required', 400, headers);
+    }
+    if (typeof password !== 'string' || password.length < 6) {
+      return errorResp('Password must be at least 6 characters', 400, headers);
+    }
+
+    // Sanitize inputs
+    email = sanitizeString(email.trim().toLowerCase());
+    name = sanitizeString(name || '');
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return errorResp('Invalid email format', 400, headers);
+    }
+
+    // Check if user already exists
     const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
-    if (existing) return errorResp('Email sudah terdaftar', 409, headers);
+    if (existing) {
+      return errorResp('Email sudah terdaftar', 409, headers);
+    }
 
     // Hash password sebelum disimpan
     const passwordHash = await hashPassword(password);
-    const result = await env.DB.prepare('INSERT INTO users (email, password_hash, name, provider) VALUES (?, ?, ?, ?)').bind(email, passwordHash, sanitizeString(name), 'email').run();
+    const result = await env.DB.prepare('INSERT INTO users (email, password_hash, name, provider) VALUES (?, ?, ?, ?)').bind(email, passwordHash, name, 'email').run();
     const userId = result.lastRowId;
     const token = await generateJWT({ userId, email }, env.JWT_SECRET);
     await env.DB.prepare('INSERT INTO user_preferences (user_id) VALUES (?)').bind(userId).run();
+
+    // Don't return sensitive information
     return safeJSONResponse({ success: true, token, user: { id: userId, email, name } }, 200, headers);
   } catch (e) {
     console.error("Registration error:", e);
@@ -300,13 +386,50 @@ async function handleRegister(request, env, headers) {
 // -- LOGIN --
 async function handleLogin(request, env, headers) {
   try {
-    const body = await request.json();
-    const user = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(body.email).first();
-    if (!user || !await verifyPassword(body.password, user.password_hash)) {
+    if (request.method !== 'POST') {
+      return errorResp('Method not allowed', 405, headers);
+    }
+
+    const rawBody = await request.text();
+    if (!rawBody || rawBody.trim().length === 0) {
+      return errorResp('Request body is required', 400, headers);
+    }
+
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch (e) {
+      return errorResp('Invalid JSON format', 400, headers);
+    }
+
+    let { email, password } = body;
+
+    // Validate required fields
+    if (typeof email !== 'string' || !email.includes('@')) {
+      return errorResp('Valid email is required', 400, headers);
+    }
+    if (typeof password !== 'string' || password.length < 1) {
+      return errorResp('Password is required', 400, headers);
+    }
+
+    // Sanitize inputs
+    email = sanitizeString(email.trim().toLowerCase());
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return errorResp('Invalid email format', 400, headers);
+    }
+
+    const user = await env.DB.prepare('SELECT id, email, name, provider, password_hash FROM users WHERE email = ?').bind(email).first();
+    if (!user || !await verifyPassword(password, user.password_hash)) {
       return errorResp('Email atau password salah', 401, headers);
     }
+
     const token = await generateJWT({ userId: user.id, email: user.email }, env.JWT_SECRET);
     await env.DB.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').bind(user.id).run();
+
+    // Don't return sensitive information like password_hash
     return safeJSONResponse({ success: true, token, user: { id: user.id, email: user.email, name: user.name, provider: user.provider } }, 200, headers);
   } catch (e) {
     console.error("Login error:", e);
@@ -403,6 +526,15 @@ function sanitizeString(str) {
 function safeJSONResponse(data, status = 200, headers = {}) { return new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } }); }
 function errorResp(msg, status, headers) { return safeJSONResponse({ error: msg }, status, headers); }
 function requiresAuth(path) { return path.startsWith('/api/') && path !== '/api/chat'; }
+
+// Utility functions
+async function hashString(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 // Password hashing functions
 async function hashPassword(password) {
