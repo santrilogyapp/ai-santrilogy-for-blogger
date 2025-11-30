@@ -115,11 +115,18 @@ window.firebaseEmailAuth = async function(email, password, authMode) {
         let endpoint, data;
         if (authMode === 'register') {
             endpoint = CLOUDFLARE_AUTH_CONFIG.ENDPOINTS.AUTH.REGISTER;
-            data = { email, password, name: email.split('@')[0] };
+            data = {
+                email: email || '',
+                password: password || '',
+                name: (email.split('@')[0] || 'User').trim()
+            };
             console.log('Registering with data:', data);
         } else {
             endpoint = CLOUDFLARE_AUTH_CONFIG.ENDPOINTS.AUTH.LOGIN;
-            data = { email, password };
+            data = {
+                email: email || '',
+                password: password || ''
+            };
             console.log('Logging in with data:', data);
         }
 
